@@ -5,6 +5,7 @@ MSA mini Project using Kubernetes
 - 목적 : Docker Build & Kubernetes Build
 - 구성요소 : Nginx/HtmlCode
 - 요건 : Docker Build와 Kubernetes 배포 Script
+- Kubernetes 환경 : https://github.com/rootsongjc/kubernetes-vagrant-centos-cluster.git
 --
 
 ## Folder Architecture
@@ -93,6 +94,9 @@ kubectl create -f ./service.yaml
 ```
 [root@node1 ~]#. kubProvisioning.sh
 ```
+
+# Result
+![result](images/result.png)
 
 ## Bugs
 
