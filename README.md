@@ -93,3 +93,23 @@ kubectl create -f ./service.yaml
 ```
 [root@node1 ~]#. kubProvisioning.sh
 ```
+
+## Bugs
+
+Please report bugs to mincloud1501@naver.com
+
+## Contributing
+
+The github repository is at https://github.com/mincloud1501/MSA_miniProject.git
+
+## See Also
+
+Some other stuff.
+
+## Author
+
+J.Ho Moon, <mincloud1501@naver.com>
+
+## Copyright and License
+
+(c) Copyright 1997~2019 by SKB Co. LTD
