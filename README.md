@@ -98,9 +98,12 @@ kubectl create -f ./service.yaml
 # Result
 ![result](images/result.png)
 
+# MAP
+![Map](images/map.png)
+
 ## Bugs
 
-Please report bugs to mincloud1501@naver.com
+Please report bugs to mincloud1501[at]naver.com
 
 ## Contributing
 
