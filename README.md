@@ -28,7 +28,7 @@ $ cat .git/config
 ```
 $ git add -A
 $ git commit -m "first" // Local Repository
-$ git push 				// Remote Repository
+$ git push // Remote Repository
 ```
 
 * Docker Build
