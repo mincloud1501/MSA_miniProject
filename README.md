@@ -71,13 +71,22 @@ $ docker-machine ip
 [root@node1 ~]# kubectl create -f deploy.yaml 로 확인
 ```
 
-[생성한 deploy yaml 파일내용을 kubProvisioning.sh로 편집 후 실행]
 ```
-cd ./Kubernetes
-. kubProvisioning.sh
+[root@node1 ~]# kubectl expose deployment/nginx1 --type="NodePort" --port 80 -o yaml > sevice.yaml
 ```
 
-* Kubernetes Git Hub Push
+[kubProvisioning.sh 편집]
 ```
-git push
+#!/bin/bash
+
+kubectl delete deploy/nginx1
+kubectl create -f ./deploy.yaml
+
+kubectl delete svc/nginx1
+kubectl create -f ./service.yaml
+```
+
+[kubProvisioning.sh 실행]
+```
+[root@node1 ~]#. kubProvisioning.sh
 ```
