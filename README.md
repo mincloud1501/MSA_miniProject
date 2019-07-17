@@ -63,8 +63,6 @@ $ docker-machine ip
 ```
 
 * Kubernetes Provisioning
-- Pre requisites
-  * MSA_miniProject Directory를 C:\Users\GKN\kubernetes-vagrant-centos-cluster 아래로 이동
 
 [kubernetes Node1] 에서 실행
 ```
