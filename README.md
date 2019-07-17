@@ -5,10 +5,12 @@ MSA mini Project using Kubernetes
 - 목적 : Docker Build & Kubernetes Build
 - 구성요소 : Nginx/HtmlCode
 - 요건 : Docker Build와 Kubernetes 배포 Script
+--
 
 ## Folder Architecture
 * DockerScript : ./docker
 * KubernetesScript : ./kubernetes
+--
 
 ## Pre requisites (Docker QuickStart Deamon에서 실행)
 ```
@@ -22,7 +24,7 @@ $ git config --global user.name "mincloud1501"
 $ git config --global user.email "mincloud1501@naver.com"
 $ cat .git/config
 ```
-
+--
 ## Usage
 * Git Push
 ```
@@ -54,6 +56,7 @@ b9c7b72516dc        mincloud1501/nginx   "nginx -g 'daemon of…"   7 seconds ag
 $ docker-machine ip
 192.168.99.100
 ```
+--
 [Test Page Connection]
 * http://docker-machine ip:8888/
 
@@ -61,7 +64,7 @@ $ docker-machine ip
 ```
 . push.sh
 ```
-
+--
 * Kubernetes Provisioning
 
 [kubernetes Node1] 에서 실행
@@ -74,7 +77,7 @@ $ docker-machine ip
 ```
 [root@node1 ~]# kubectl expose deployment/nginx1 --type="NodePort" --port 80 -o yaml > sevice.yaml
 ```
-
+--
 [kubProvisioning.sh 편집]
 ```
 #!/bin/bash
@@ -85,7 +88,7 @@ kubectl create -f ./deploy.yaml
 kubectl delete svc/nginx1
 kubectl create -f ./service.yaml
 ```
-
+--
 [kubProvisioning.sh 실행]
 ```
 [root@node1 ~]#. kubProvisioning.sh
