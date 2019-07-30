@@ -1,5 +1,5 @@
 # MSA_miniProject
-MSA mini Project using Kubernetes
+Micro Service Architecture mini Project using Kubernetes
 
 ## Info
 - 목적 : Docker Build & Kubernetes Build
