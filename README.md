@@ -5,6 +5,8 @@ Micro Service Architecture mini Project using Kubernetes
 
 ## Kubernetes v.1.16
 - Kubernetes is a portable, extensible, open-source platform for managing containerized workloads(Pods, Replicaset..) and services. (쿠버네티스는 컨테이너화된 워크로드와 서비스를 관리하기 위한 이식성이 있고, 확장가능한 오픈소스 플랫폼이다.)
+- application을 배포하기 위해 desired state를 다양한 object에 라벨Label을 붙여 정의(yaml)하고 API 서버에 전달하는 방식을 사용
+- kube는 Deployment, StatefulSets, DaemonSet, Job, CronJob등 다양한 배포 방식을 지원
 
 [Kubernetes Architecture & Ecosystem] [![Sources](https://img.shields.io/badge/출처-learnitguide-yellow)](https://www.learnitguide.net/2018/08/what-is-kubernetes-learn-kubernetes.html) [![Sources](https://img.shields.io/badge/출처-magalix-yellow)](https://www.magalix.com/blog/kubernetes-101-concepts-and-why-it-matters)
 
@@ -35,7 +37,8 @@ Micro Service Architecture mini Project using Kubernetes
 * KubernetesScript : ./kubernetes
 
 ## Prerequisites (Docker QuickStart Deamon에서 실행)
-```
+
+```bash
 $ cd ~/MSA_miniProject
 $ mdir docker
 $ mkdir kubernetes
@@ -49,24 +52,28 @@ $ cat .git/config
 
 ## Usage
 * Git Push
-```
+
+```bash
 $ git add -A
 $ git commit -m "first"	// Local Repository
 $ git push // Remote Repository
 ```
 
 * Docker File Edit [/docker/build.sh]
-```
+
+```bash
 docker build --rm -t mincloud1501/nginx .
 docker run -d --rm --name nginx1 -p 8888:80 mincloud1501/nginx
 ```
 * Docker Build
-```
+
+```bash
 cd ./docker
 . build.sh
 ```
 * Docker Check
-```
+
+```bash
 $ docker images
 REPOSITORY           TAG                 IMAGE ID            CREATED             SIZE
 mincloud1501/nginx   latest              40f4b6da1e0f        24 seconds ago      109MB
@@ -81,28 +88,31 @@ $ docker-machine ip
 
 [Test Page Connection]
 
-*http://docker-machine ip:8888*
+*http://docker-machine-ip:8888*
 
 * Docker Hub Push
-```
+
+```bash
 . push.sh
 ```
 
 * Kubernetes Provisioning
 
 - [kubernetes Node1] 에서 실행
-```
+
+```bash
 [root@node1 ~]# kubectl delete deploy/nginx1; kubectl run nginx1 --image=mincloud1501/nginx --port=80 -o yaml > deploy.yaml
 
 [root@node1 ~]# kubectl create -f deploy.yaml 로 확인
 ```
 
-```
+```bash
 [root@node1 ~]# kubectl expose deployment/nginx1 --type="NodePort" --port 80 -o yaml > sevice.yaml
 ```
 
 - [kubProvisioning.sh 편집]
-```
+
+```bash
 #!/bin/bash
 
 kubectl delete deploy/nginx1
@@ -113,7 +123,8 @@ kubectl create -f ./service.yaml
 ```
 
 [kubProvisioning.sh 실행]
-```
+
+```bash
 [root@node1 ~]#. kubProvisioning.sh
 ```
 
@@ -125,7 +136,7 @@ kubectl create -f ./service.yaml
 
 ---
 
-### ■ Component (Master/Node)
+### Component (Master/Node)
 
 ![Kubernetes_Architecture](images/kubernetes_architecture.jpg)
 
@@ -183,9 +194,10 @@ kubectl create -f ./service.yaml
 
 ---
 
-### ■ Object
+### Object
 
-- k8s object는 k8s system에서 영속성을 가지는 개체로 k8s는 cluster의 status를 나타내기 위해 이 개체를 이용
+- k8s object는 k8s system에서 영속성을 가지는 개체로 k8s는 cluster의 status를 관리하기 위해 object를 이용 (Pod/ReplicaSet
+/Service/Volume)
 	- 어떤 컨테이너화된 application이 동작 중인지 (그리고 어느 node에서 동작 중인지)
 	- 그 application이 이용할 수 있는 resource
 	- 그 application이 어떻게 재구동 정책, upgrade, 그리고 내고장성과 같은 것에 동작해야 하는지에 대한 정책
@@ -193,7 +205,7 @@ kubectl create -f ./service.yaml
 - object를 생성하게 되면, k8s는 그 object 생성을 보장하기 위해 지속적으로 작동
 - 생성/수정/삭제를 위해 k8s object를 동작시키려면, 쿠버네티스 API를 이용해야 한다. kubectl CLI를 이용할 때, 필요한 k8s API를 호출
 
-[k8s deployment를 위한 요청 필드와 object spec을 보여주는 .yaml 파일 예시]
+[k8s deployment를 위한 Object Spec - YAML]
 
 ```yaml
 apiVersion: apps/v1 # apps/v1beta2를 사용하는 1.9.0보다 더 이전의 버전용
@@ -216,6 +228,70 @@ spec:
         ports:
         - containerPort: 80
 ```
+
+---
+
+### Management Platform
+
+Docker 및 k8s cluster를 배포 관리할 수 있는 플랫폼들을 알아보자.
+
+- Rancher 2.0, OpenShift(Red Hat), Tectonic(CoreOS), Docker Enterprise Edition 등
+- Service Mesh(Istio, linkerd), CI(Tekton, Spinnaker), Container Serverless(Knative), Machine Learning(kubeflow)이 모두 kube 환경
+
+[평가 요소]
+
+- k8s cluster의 provisioning
+- 고가용성 및 복구
+- 지원되는 배포 model
+- 필수 구성 요소 및 운영 체제 요구 사항
+- monitoring 및 운영 관리
+- multi-cluster 관리 등
+
+#### RHOCP (Red Hat OpenShift Container Platform)
+- 순수 Open Source Model
+- Enterprise `지원 관점`에서 OpenShift는 Rancher보다 약 5배 비쌈
+- Red Hat OS에 국한되며 Windows를 지원하지 않음
+- Docker Image의 전체 Life-cycle를 관리
+
+#### Pivotal Cloud Foundry (PCF)
+- PAS (Pivotal Application Service) & Pivotal Container Service (PKS)로 구성
+- `Ubuntu에서만 실행`되며 값 비싼 모델이라 기업에 친숙하지 않은 가격 Model
+- Open-Core Model, Microsoft Windows Server를 지원
+- 개발자가 사전 개발된 Docker Image를 맞춤 개발하여 registry에서 배포 가능
+- Spring Boot 및 Spring Cloud를 사용하는 12팩터 응용 프로그램을 제공
+
+#### Rancher v.2.0 [![Sources](https://img.shields.io/badge/출처-Rancher-yellow)](https://rancher.com)
+- Linux host, docker container, k8s node 위에서 위치나 인프라와 관계 없이 관리하며, Amazon EKS, Google k8s engine, Azure container service, 기타 서비스로서의 k8s cloud에서 k8s cluster 관리 가능
+
+#### CoreOS Tectonic
+- container 중심의 linux 배포판과 enterprise급 k8s 배포판을 제공. 이 두 개가 합쳐진 것이 Tectonic stack의 기반을 형성
+- CoreOS 운영 체제인 `Container Linux`는 콘테이너화된 구성요소의 모음으로 제공된다는 점에서 차별점을 지닌다.
+- 실행 중인 애플리케이션을 중단할 필요 없이, OS에 대한 자동화된 업데이트를 가능하게 해 준다.
+
+#### Platform9 Managed k8s
+- 다양한 환경(Local baremetal, 원격 public cloud 등)에서도 실행되지만, 플랫폼9의 서비스 형태로 원격 관리
+- 플랫폼9는 매니지드 쿠버네티스에 대한 업데이트를 약 6주에 한번씩 고객 감시 하에 내보낸다.
+- Severless Compute 또는 FaaS라고도 하는데 거의 대부분의 프로그래밍 언어와 콘테이너화된 런타임으로 작동된다.
+
+![trend](images/trend.png)
+
+### ★ Considerations
+
+- k8s cluster에 Deployment를 배포하고 Ingress를 연결하자. Nginx말고 Traefik Ingress도 좋다던데?
+- AWS에 설치할 땐 kops(Kubernetes Operations)가 좋고, 요즘엔 Amazon EKS(Elastic Kubernetes Service)도 선호?
+- on-premise에 설치할 때, kubespray / kubeadm / rancher / openshift 중에 뭐가 좋을까?
+- k8s에 istio나 linkerd 설치해서 service mesh 적용하고 zipkin으로 추적하자!
+- Container Serverless Cloud Run이 Knative 기반이라던데?
+- Container build, 배포는 Spinnaker나 Jenkins X (Jenkins와는 다름!) 써볼까?
+- 설정 파일은 helm으로 만들고, ChartMuseum으로 관리하자!
+- cluster 하나는 불안한데...? multi-cluster 구성해야 하지 않을까? Anthos?
+- Cloud Native Application 만들어서 k8s에 배포하자!
+
+---
+
+### Mindmap
+
+![mindmap](images/README.md.svg)
 
 ---
 
