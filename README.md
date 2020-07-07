@@ -3,6 +3,51 @@ Micro Service Architecture mini Project using Kubernetes
 
 ☞ 하기 모든 내용의 출처는 [![Sources](https://img.shields.io/badge/출처-Kubernetes-yellow)](https://kubernetes.io/ko/docs/home/)
 
+![Kubernetes](images/container_evolution.png)
+
+- `Traditional Deployment`: 애플리케이션을 물리 서버에서 실행하여 리소스 할당의 문제가 발생, 다른 애플리케이션의 성능이 저하 발생, 서로 다른 여러 물리 서버에서 각 애플리케이션을 실행하여 해결하려 했으나 리소스가 충분히 활용되지 않는다는 점에서 확장 가능하지 않고, 물리 서버를 많이 유지하기 위해서 조직에게 많은 비용이 발생
+
+- `Virtualized Deployment` : 가상화가 도입되어 단일 물리 서버의 CPU에서 여러 가상 시스템(VM)을 실행할 수 있게 하여 VM간에 애플리케이션을 격리하고 애플리케이션의 정보를 다른 애플리케이션에서 자유롭게 액세스 할 수 없게 일정 수준의 보안성을 제공, 물리 서버에서 리소스를 보다 효율적으로 활용할 수 있으며, 쉽게 애플리케이션을 추가하거나 업데이트할 수 있고 하드웨어 비용을 절감할 수 있어 더 나은 확장성을 제공
+
+- `Container Deployment` : 컨테이너는 VM과 유사하지만 격리 속성을 완화하여 애플리케이션 간에 운영체제(OS)를 공유한다. VM과 마찬가지로 컨테이너에는 자체 파일 시스템, CPU, 메모리, 프로세스 공간 등이 있고 기본 인프라와의 종속성을 끊었기 때문에, 클라우드나 OS 배포본에 모두 이식 가능
+
+## Kubernetes Component
+
+- 쿠버네티스를 배포하면 Cluster가 생긱는데 컨테이너화된 애플리케이션을 실행하는 `Node`라고 하는 워커 머신의 집합으로 모든 클러스터는 최소 한 개의 워커 노드를 가진다.
+- 워커 노드는 애플리케이션의 구성요소인 POD를 host 하는데, Control Plane은 워커 노드와 클러스터 내 파드를 관리한다. 
+
+![Component](images/components-of-kubernetes.png)
+
+#### Control Plane Component
+- 클러스터에 관한 전반적인 결정(스케줄링)을 수행하고 클러스터 이벤트를 감지하고 반응한다.
+- 클러스터 내 어떠한 머신에서든지 동작할 수 있지만 간결성을 위하여, 구성 스크립트는 보통 동일 머신 상에 모든 컨트롤 플레인 컴포넌트를 구동시키고, 사용자 컨테이너는 해당 머신 상에 동작시키지 않는다.
+
+■ `kube-apiserver`
+- API 서버는 쿠버네티스 API를 노출하는 쿠버네티스 컨트롤 플레인 컴포넌트로 쿠버네티스 컨트롤 플레인의 프론트 엔드이다.
+- kube-apiserver는 수평으로 확장되도록 디자인되어, 더 많은 인스턴스를 배포해서 확장할 수 있다. 여러 kube-apiserver 인스턴스를 실행하고, 인스턴스간의 트래픽을 균형있게 조절할 수 있다.
+
+■ `etcd`
+- 모든 클러스터 데이터를 담는 쿠버네티스 뒷 단의 저장소로 사용되는 일관성·고가용성 키-값 저장소.
+
+■ `kube-scheduler`
+- 노드가 배정되지 않은 새로 생성된 파드를 감지하고, 실행할 노드를 선택하는 컨트롤 플레인 컴포넌트.
+
+■ `kube-controller-manager`
+- 컨트롤러를 구동하는 마스터 상의 컴포넌트로 각 컨트롤러는 개별 프로세스이지만, 복잡성을 낮추기 위해 모두 단일 바이너리로 컴파일되고 단일 프로세스 내에서 실행
+	- `node controller` : 노드가 다운되었을 때 통지와 대응에 관한 책임을 가진다.
+	- `replication controller` : 시스템의 모든 레플리케이션 컨트롤러 오브젝트에 대해 알맞은 수의 파드들을 유지시켜 주는 책임을 가진다.
+	- `end-point controller` : 엔드포인트 오브젝트를 채운다(즉, 서비스와 파드를 연결시킨다.)
+	- `service account & token controller` : 새로운 네임스페이스에 대한 기본 계정과 API 접근 토큰을 생성한다.
+
+■ `cloud-controller-manager`
+- 클라우드별 컨트롤 로직을 포함하는 쿠버네티스 컨트롤 플레인 컴포넌트로 클러스터를 클라우드 공급자의 API에 연결하고, 해당 클라우드 플랫폼과 상호 작용하는 컴포넌트와 클러스터와 상호 작용하는 컴포넌트를 분리할 수 있다.
+
+#### Node Component
+- 
+
+#### AddOn
+- 
+
 ## Kubernetes v.1.16
 - Kubernetes is a portable, extensible, open-source platform for managing containerized workloads(Pods, Replicaset..) and services. (쿠버네티스는 컨테이너화된 워크로드와 서비스를 관리하기 위한 이식성이 있고, 확장가능한 오픈소스 플랫폼이다.)
 - application을 배포하기 위해 desired state를 다양한 object에 라벨Label을 붙여 정의(yaml)하고 API 서버에 전달하는 방식을 사용
