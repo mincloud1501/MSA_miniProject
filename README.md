@@ -242,7 +242,13 @@ spec:
 
 ---
 
-# Minikube Test Project [![Sources](https://img.shields.io/badge/출처-katacoda-yellow)](https://www.katacoda.com/courses/kubernetes)
+# Minikube Sample Project [![Sources](https://img.shields.io/badge/출처-katacoda-yellow)](https://www.katacoda.com/courses/kubernetes)
+
+## Minikube 설치 [![Sources](https://img.shields.io/badge/출처-Minikube-yellow)](https://kubernetes.io/ko/docs/tasks/tools/install-minikube/)
+
+- kubectl 설치
+- hypervisor 설치
+- 패키지를 이용하여 Minikube 설치
 
 ![Minikube](images/minikube.png)
 
@@ -250,6 +256,8 @@ spec:
 
 - k8s는 서로 연결되어서 단일 유닛처럼 동작하는 고가용성의 컴퓨터 클러스터를 상호 조정한다.
 - k8s는 애플리케이션 컨테이너를 클러스터에 분산시키고 스케줄링하는 일을 보다 효율적으로 자동화한다.
+
+![cluster_diagram](images/cluster_diagram.png)
 
 ```bash
 $ minikube version
@@ -283,6 +291,8 @@ To further debug and diagnose cluster problems, use 'kubectl cluster-info dump'.
 - kubectl은 지정된 리소스(node, container)에서 지정된 작업(create, describe 등)이 수행된다.
 - deployment는 application instance를 생성하고 update하는 역할을 담당한다.
 - application이 k8s 상에 배포되려면 지원되는 container 형식 중 하나로 packaging 되어야 한다.
+
+![application_deployment](images/application_deployment.png)
 
 ```bash
 # Check kubectl installed
@@ -330,6 +340,8 @@ $ curl http://localhost:8001/version
 - Pod는 하나 또는 그 이상의 애플리케이션 컨테이너 (docker 또는 rkt와 같은)들의 그룹이고, 공유 Storage(Volumn), IP 주소 그리고 그것을 동작시키는 방식에 대한 정보를 포함하고 있다.
 - 만약 컨테이너들이 밀접하고 결합되어 있고 디스크와 같은 자원을 공유해야 한다면, 오직 하나의 단일 파드에 함께 스케쥴되어져야 한다.
 - Node는 k8s에 있어서 워커 머신이며, cluster에 따라 VM 또는 물리 머신이 될 수 있다. 여러 개의 pod는 하나의 node 위에서 동작할 수 있다.
+
+![pod&node](images/pod&node.png)
 
 ```bash
 # pod의 container에 대한 세부 정보를 확인 (IP 주소, 사용된 port 및 pod의 lifecycle과 관련된 event 목록)
@@ -475,6 +487,8 @@ $
 ## 앱 노출을 위해 서비스 이용하기
 
 - k8s `Service`는 논리적 pod set을 정의하고 외부 traffic exposure, load balancing, 그 pod들에 대한 service discovery를 가능하게 해주는 abstract layer이다.
+
+![use_service](images/use_service.png)
 
 [Step 1] Create a new service
 
@@ -663,6 +677,8 @@ Hello Kubernetes bootcamp! | Running on: kubernetes-bootcamp-765bf4c7b4-pfg74 | 
 - kubectl run 명령에 --replicas 파라미터를 사용해서 처음부터 복수의 인스턴스로 구동되는 deployment를 만들 수 있다.
 - deployment의 복제 수를 변경하면 scaling이 수행된다.
 
+![replicaset](images/replicaset.png)
+
 [Step 1] Scaling a deployment
 
 ```bash
@@ -775,6 +791,8 @@ kubernetes-bootcamp-765bf4c7b4-qnn5m   1/1     Running   0          8m30s   172.
 
 - 롤링 업데이트는 pod instance를 점진적으로 새로운 것으로 update하여 deployment update가 service 중단 없이 이루어질 수 있도록 해준다.
 - deployment가 외부로 노출되면, service는 update가 이루어지는 동안 오직 가용한 pod에게만 traffic을 load-balance 할 것이다.
+
+![rolling_update](images/rolling_update.gif)
 
 [Step 1] Update the version of the app
 
