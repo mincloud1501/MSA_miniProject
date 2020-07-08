@@ -106,11 +106,10 @@ $ docker-machine ip
 
 * Kubernetes Provisioning
 
-- [kubernetes Node1] 에서 실행
+[Step 1] : kubernetes Node1에서 실행
 
 ```bash
 [root@node1 ~]# kubectl delete deploy/nginx1; kubectl run nginx1 --image=mincloud1501/nginx --port=80 -o yaml > deploy.yaml
-
 [root@node1 ~]# kubectl create -f deploy.yaml 로 확인
 ```
 
@@ -118,7 +117,7 @@ $ docker-machine ip
 [root@node1 ~]# kubectl expose deployment/nginx1 --type="NodePort" --port 80 -o yaml > sevice.yaml
 ```
 
-- [kubProvisioning.sh 편집]
+[Step 2] : kubProvisioning.sh 편집
 
 ```bash
 #!/bin/bash
@@ -130,7 +129,7 @@ kubectl delete svc/nginx1
 kubectl create -f ./service.yaml
 ```
 
-[kubProvisioning.sh 실행]
+[Step 3] : kubProvisioning.sh 실행
 
 ```bash
 [root@node1 ~]#. kubProvisioning.sh
@@ -160,12 +159,12 @@ kubectl create -f ./service.yaml
 
 `kube-scheduler`
 
-- node가 배정되지 않은 새로 생성된 pod를 감지하고, 구동될 node를 선택하는 master component
+- node가 배정되지 않은 새로 생성된 pod를 감지하고, 구동될 node를 선택 및 할당하는 master component
 - 스케줄링 결정을 위해서 고려되는 요소는 리소스에 대한 개별 및 총체적 요구 사항, 하드웨어/소프트웨어/정책적 제약, affinity 및 anti-affinity 명세, 데이터 지역성, 워크로드-간 간섭, 데드라인을 포함
 
 `kube-controller-manager`
 
-- controller를 구동하는 master component
+- controller를 구동하는 master component로 거의 모든 Object의 상태를 관리
 - 논리적으로, 각 controller는 개별 process이지만, 복잡성을 낮추기 위해 모두 단일 binary로 compile되고 단일 process 내에서 실행
 	- node controller : node가 down되었을 때 통지와 대응에 관한 책임
 	- replication controller : 시스템의 모든 replication controller object에 대해 알맞는 수의 pod들을 유지
@@ -174,11 +173,12 @@ kubectl create -f ./service.yaml
 
 `etcd`
 
-- 모든 cluster data를 담는 k8s backend 저장소로 사용되는 일관성·고가용성 key-value 저장소
+- 모든 cluster data를 담는 k8s backend 저장소로 사용되는 일관성·고가용성 RAFT 알고리즘을 이용한 key-value 저장소
+- cluster의 모든 설정, 상태 데이터는 여기 저장되고 나머지 모듈은 stateless하게 동작하기 때문에, etcd만 잘 백업해두면 언제든지 클러스터를 복구 가능
 
 `cloud-controller-manager`
 
-- cloud 제공 사업자와 상호작용하는 controller를 작동
+- AWS, GCE, Azure 등 cloud 제공 사업자와 상호작용하는 controller를 작동
 - cloud-controller-manager binary는 k8s release 1.6에서 도입된 alpha 기능
 - cloud vendor code와 k8s code가 서로 독립적으로 발전시켜 나갈 수 있도록 해준다.
 
@@ -186,13 +186,13 @@ kubectl create -f ./service.yaml
 
 `kubelet`
 
-- cluster의 각 node에서 실행되는 agent. Kubelet은 pod에서 container가 확실하게 동작하도록 관리
+- cluster의 각 node에서 실행되는 agent로 node에 할당된 Pod의 Lifecycle을 관리
 - Kubelet은 k8s를 통해 생성되지 않는 container는 관리하지 않는다.
 
 `kube-proxy`
 
-- kube-proxy는 cluster의 각 node에서 실행되는 network proxy로, k8s의 service 개념의 구현부
-- node의 network 규칙을 유지 관리하며 이 네트워크 규칙이 내부 network session이나 cluster 외부에서 pod로 network 통신을 할 수 있도록 해준다.
+- kube-proxy는 cluster의 각 node에서 실행되는 network proxy로 Pod로 연결되는 네트워크를 관리
+- TCP, UDP, SCTP 스트림을 포워딩하고 여러 개의 Pod을 roundrobin 형태로 묶어 서비스를 제공
 
 `container runtime`
 
@@ -205,39 +205,209 @@ kubectl create -f ./service.yaml
 
 ---
 
-### Object
+# K8s Terminology
 
-- k8s object는 k8s system에서 영속성을 가지는 개체로 k8s는 cluster의 status를 관리하기 위해 object를 이용 (Pod/ReplicaSet
-/Service/Volume)
+## Object
+
+- Kubernetes의 Input은 Action이 아니라 `Desired State`이다.
+
+```
+Additionally, Kubernetes is not a mere orchestration system. In fact, it eliminates the need for orchestration. The technical definition of orchestration is execution of a defined workflow: first do A, then B, then C. In contrast, Kubernetes is comprised of a set of independent, composable control processes that continuously drive the current state towards the provided desired state. It shouldn’t matter how you get from A to C.
+```
+
+- k8s object는 cluster의 `status`를 관리하기 위한 Entity이다. (`Pod/ReplicaSet/Service/Volume`)
 	- 어떤 컨테이너화된 application이 동작 중인지 (그리고 어느 node에서 동작 중인지)
 	- 그 application이 이용할 수 있는 resource
 	- 그 application이 어떻게 재구동 정책, upgrade, 그리고 내고장성과 같은 것에 동작해야 하는지에 대한 정책
-
-- object를 생성하게 되면, k8s는 그 object 생성을 보장하기 위해 지속적으로 작동
-- 생성/수정/삭제를 위해 k8s object를 동작시키려면, 쿠버네티스 API를 이용해야 한다. kubectl CLI를 이용할 때, 필요한 k8s API를 호출
+- Object는 K8s API의 Endpoint로서 동작한다.
+- 각각의 Object는 Spec과 Status라는 필드를 갖게되는데 K8s는 Object의 Spec을 통해 사용자가 기대하는 상태(Desired State)가 무엇인지 알 수 있고, 기대되는 값에 대비한 현재의 상태를 Object의 Status를 통해 알 수 있다.
+- Object의 Status를 갱신하고, Object를 Spec에 정의된 상태로 지속적으로 변화시키는 주체를 `Controller`라고 한다.
 
 [k8s deployment를 위한 Object Spec - YAML]
 
-```yaml
-apiVersion: apps/v1 # apps/v1beta2를 사용하는 1.9.0보다 더 이전의 버전용
-kind: Deployment
+```bash
+apiVersion: apps/v1        # K8s api version, 특정 object는 v1beta를 사용한다.
+kind: Deployment           # 생성할 object, controller의 종류
 metadata:
-  name: nginx-deployment
-spec:
+  name: nginx-deployment   # object의 고유 이름, 복수로 생성할 경우 prefix로 사용된다.
+spec:				       # 기대되는 obejct의 상태
   selector:
     matchLabels:
-      app: nginx
-  replicas: 2 # 템플릿에 매칭되는 파드 2개를 구동하는 디플로이먼트임
+      app: nginx 		   # Service가 연결할 대상 Pod의 label
+  replicas: 2              # 템플릿에 매칭되는 파드 2개를 구동하는 디플로이먼트임
   template:
     metadata:
-      labels:
+      labels:              # 외부에서 Pod을 찾을 때 사용할 label. 복수의 label 입력가능
         app: nginx
     spec:
-      containers:
-      - name: nginx
-        image: nginx:1.7.9
+      containers:		   # Pod 내부에서 생성할 컨테이너 목록
+      - name: nginx   	   # 컨테이너 이름
+        image: nginx:1.7.9 # 컨테이너를 실행할 이미지
         ports:
         - containerPort: 80
+```
+
+### Pod
+
+- Pod은 K8s가 상태유지를 위해 사용하는 가장 작은 배포 단위를 의미한다. (최소단위가 Container가 아님)
+- Pod에 속한 container는 storage와 network를 공유하고 서로 localhost로 접근할 수 있다.
+- Pod을 알맞은 Node에 효율적으로 배치하고, 사용자가 기대하는 상태로 문제없이 실행되도록 Pod이 죽으면 다시 살려주거나, Node가 죽으면 기존 Node의 Pod을 다른 건강한 Node에 배치하는 등 Pod의 Life Cycle을 관리하는 것이 K8s의 가장 큰 역할 중 하나이다.
+
+![pod](images/pod.png)
+
+#### Pod 생성하기 [![Sources](https://img.shields.io/badge/출처-Core_Kubernetes-yellow)](https://blog.heptio.com/core-kubernetes-jazz-improv-over-orchestration-a7903ea92ca)
+
+![pod_process](images/pod_process.png)
+
+- kubectl은 API Server에 Pod 생성을 요청
+- API Server는 etcd에 Node에 할당되지 않은 Pod가 있음을 update
+- Scheduler는 etcd의 변경사항을 API Server를 통해 watch하고 Pod을 실행할 Node를 선택하여, API Server에 해당 Node에 Pod을 배정하도록 update
+- 해당 Node의 Kubelet은 생성할 Pod 정보를 watch해서 Docker Container를 실행하고 결과를 API Server에 지속적으로 update
+- API Server는 전달받은 Pod의 State를 etcd에 update
+
+### ReplicaSet
+
+- ReplicaSet은 Pod (Object)을 복제 생성하고, 복제된 Pod의 개수를 (Spec에 정의된 개수만큼) 지속적으로 유지하는 Object이다.
+- 직접적으로 ReplicaSet을 사용하기보다는 Deployment등 다른 object에 의해서 사용되는 경우가 많다.
+- ReplicaSet은 Pod의 Replication 관리만 한다. ReplicaSet에 의해 3개의 Pod이 실행 중인 상태에서 ReplicaSet을 삭제하면, 해당 ReplicaSet의 관리 대상이었던 Pod은 삭제되지 않고 실행상태로 유지 가능하다. (ReplicaSet이 Pod을 소유하는 개념이 아닌, 특정한 Label Selector Rule에 따라 Pod의 개수/상태를 유지하는 역할만 수행)
+
+![replicaset](images/replicaset1.png)
+
+#### ReplicaSet 생성하기 [![Sources](https://img.shields.io/badge/출처-The_DevOps_2.3_Toolkit-yellow)](https://leanpub.com/the-devops-2-3-toolkit)
+
+![replicaset_process](images/replicaset_process.png)
+
+- kubectl create 명령으로 ReplicaSet 생성을 요청하면 다음과 같이 ReplicaSet을 생성하고, ReplicaSet Controller에 의해서 Pod을 생성한다.
+- 모든 상태는 Etcd에 저장되고 ReplicaSet Controller, Scheduler, Kubelet등은 Etcd에 바로 접근하는 것이 아니고 API Server를 경유해서 Etcd의 데이터에 접근한다.
+
+### Service [![Sources](https://img.shields.io/badge/출처-medium-yellow)](https://medium.com/google-cloud/kubernetes-nodeport-vs-loadbalancer-vs-ingress-when-should-i-use-what-922f010849e0)
+
+- Network와 관련된 Object로 Pod를 외부 네트워크와 연결해주고, 여러 개의 Pod을 바라보는 내부 Load Balancer를 생성할 때 사용한다.
+- 내부 DNS에 Service Name을 Domain으로 등록하기 때문에 Service Discovery 역할도 담당한다.
+
+```bash
+apiVersion: v1
+kind: Service
+metadata:  
+  name: my-internal-service
+spec:
+  selector:    
+    app: my-app
+  type: ClusterIP # ClusterIP는 k8s 기본 서비스로, cluster 내의 다른 app이 접근할 수 있게 해준다. ClusterIP는 외부 접근이 되지 않는다. (Kubernetes Proxy를 통하면 접근 가능)
+  ports:  
+  - name: http
+    port: 80
+    targetPort: 80
+    protocol: TCP
+```      
+
+#### [Case 1] : Proxy 사용하기
+
+- Service를 debugging하거나 어떤 이유로 PC에서 직접 접근할 때, 내부 dashboard 표시 등 내부 traffic을 허용할 때 사용한다.
+- 이 방식에서는 권한 있는 사용자가 kubectl을 실행해야 하기 때문에, 서비스를 외부에 노출하는데 사용하거나 실서비스에서 사용해서는 안 된다.
+
+![service](images/service.png)
+
+#### [Case 2] : NodePort 사용하기
+
+- NodePort Service는 service에 외부 traffic을 직접 보낼 수 있는 가장 원시적인 방법이다.
+- 모든 Node(VM)에 특정 Port를 열어 두고, 이 port로 보내지는 모든 traffic을 service로 forwarding한다.
+
+![nodeport](images/nodeport.png)
+
+- Port당 한 Service만 할당할 수 있으며, 30000-32767 사이의 port만 사용할 수 있다. 또한, Node나 VM의 IP 주소가 바뀌면, 이를 반영해 줘야 한다.
+
+```bash
+apiVersion: v1
+kind: Service
+metadata:  
+  name: my-nodeport-service
+spec:
+  selector:    
+    app: my-app
+  type: NodePort # node에 어떤 포트를 열어줄지 지정하는 nodePort라는 추가 포트가 있다.
+  ports:  
+  - name: http
+    port: 80
+    targetPort: 80
+    nodePort: 30036
+    protocol: TCP
+```
+
+#### [Case 3] : LoadBalancer 사용하기
+
+- Service를 Internet에 Expose하는 일반적인 방식으로 GKE에서는 Network Load Balancer를 작동시켜 모든 traffic을 service로 forwarding하는 단 하나의 IP 주소를 제공한다.
+
+![loadbalancer](images/loadbalancer.png)
+
+- Service를 직접적으로 expose하기를 원한다면, LoadBalancer가 기본적인 방법이다.
+- 지정한 port의 모든 traffic은 service로 forwarding 될 것이다. filtering이나 routing 같은건 전혀 없다. 거의 모든 traffic protocol을 사용할 수 있다.
+- 가장 큰 단점은 LoadBalancer로 노출하고자 하는 각 서비스마다 자체의 IP 주소를 갖는 것과, 노출하는 서비스마다 LoadBalancer 비용을 지불해야 하기 때문에 값이 비싸진다.
+
+#### [Case 4] : Ingress 사용하기
+
+- 여러 service들 앞단에서 `Smart Router` 역할을 하거나, cluster의 `Entrypoint` 역할을 한다.
+- 기본 GKE Ingress Controller는 HTTP(S) Load Balancer를 만들어 준다. 백엔드 서비스로 경로(path)와 서브 도메인 기반의 라우팅을 모두 지원한다.
+- 예를 들어, foo.yourdomain.com으로 들어오는 모든 트래픽을 foo 서비스로 보낼 수 있고, yourdomain.com/bar/ 경로로 들어오는 모든 트래픽을 bar 서비스로 보낼 수 있다.
+
+![ingress](images/ingress.png)
+
+```bash
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: my-ingress
+spec:
+  backend:
+    serviceName: other
+    servicePort: 8080
+  rules:
+  - host: foo.mydomain.com
+    http:
+      paths:
+      - backend:
+          serviceName: foo
+          servicePort: 8080
+  - host: mydomain.com
+    http:
+      paths:
+      - path: /bar/*
+        backend:
+          serviceName: bar
+          servicePort: 8080
+```
+
+- Google Cloud Load Balancer와 Nginx, Contour, Istio 등과 같은 많은 Ingress Controller Type이 있다.
+- 동일한(보통 HTTP) L7 Protocol을 사용하는 여러 service들을 같은 IP 주소로 외부에 노출한다면 Ingress가 가장 유용할 것이다.
+- Native GCP integration을 사용한다면, 단 하나의 Load Balancer만 지불하면 되고, ingress는 smart하기 때문에 (SSL, Auth, Routing과 같은) 다양한 기능들을 활용할 수 있다.
+
+### Volume [![Sources](https://img.shields.io/badge/출처-kubernetes-yellow)](https://kubernetes.io/ko/docs/concepts/storage/volumes)
+
+- 저장소와 관련된 Object로 Host Directory를 그대로 사용할 수도 있고, EBS(ElasticBlockStore) 같은 Storage를 동적으로 생성하여 사용할 수도 있다.
+- Container내의 Disk에 있는 file은 임시적이며, container에서 실행될 때 app에 적지 않은 몇 가지 문제가 발생한다.
+	- 첫째, container가 충돌되면, kubelet은 container를 재시작하지만, container는 초기 상태로 시작되기 때문에 기존 파일이 유실된다.
+	- 둘째, Pod에서 container를 함께 실행할 때 container간에 file을 공유해야 하는 경우 `volume 추상화`로 이 두 가지 문제를 모두 해결해 준다.
+
+[AWS EBS 구성 예시]
+
+```bash
+apiVersion: v1
+kind: Pod
+metadata:
+  name: test-ebs
+spec:
+  containers:
+  - image: k8s.gcr.io/test-webserver
+    name: test-container
+    volumeMounts:
+    - mountPath: /test-ebs
+      name: test-volume
+  volumes:
+  - name: test-volume
+    # 이 AWS EBS 볼륨은 이미 존재해야 한다.
+    awsElasticBlockStore:
+      volumeID: <volume-id>
+      fsType: ext4
 ```
 
 ---
@@ -306,7 +476,7 @@ NAME       STATUS   ROLES    AGE   VERSION
 minikube   Ready    master   25s   v1.17.3
 ```
 
-- 첫 번째 app을 Kubectel create deployment 명령과 함께 Kubernetes에 배치한다. 배포 이름과 앱 이미지 위치(Docker 허브 외부에서 호스팅되는 이미지에 대한 전체 리포지토리 URL 포함)를 제공해야 한다.
+- 첫 번째 app을 Kubectl create deployment 명령과 함께 Kubernetes에 배치한다. 배포 이름과 앱 이미지 위치(Docker 허브 외부에서 호스팅되는 이미지에 대한 전체 리포지토리 URL 포함)를 제공해야 한다.
 
 ```bash
 $ kubectl create deployment kubernetes-bootcamp --image=gcr.io/google-samples/kubernetes-bootcamp:v1
@@ -337,11 +507,9 @@ $ curl http://localhost:8001/version
 
 ## Pod와 Node 보기
 
-- Pod는 하나 또는 그 이상의 애플리케이션 컨테이너 (docker 또는 rkt와 같은)들의 그룹이고, 공유 Storage(Volumn), IP 주소 그리고 그것을 동작시키는 방식에 대한 정보를 포함하고 있다.
-- 만약 컨테이너들이 밀접하고 결합되어 있고 디스크와 같은 자원을 공유해야 한다면, 오직 하나의 단일 파드에 함께 스케쥴되어져야 한다.
+- Pod는 하나 또는 그 이상의 application container (docker 또는 rkt와 같은)들의 group이고, 공유 Storage(Volume), IP 주소 그리고 그것을 동작시키는 방식에 대한 정보를 포함하고 있다.
+- 만약 container들이 밀접하고 결합되어 있고 디스크와 같은 자원을 공유해야 한다면, 오직 하나의 단일 pod에 함께 schedule되어야 한다.
 - Node는 k8s에 있어서 워커 머신이며, cluster에 따라 VM 또는 물리 머신이 될 수 있다. 여러 개의 pod는 하나의 node 위에서 동작할 수 있다.
-
-![pod&node](images/pod&node.png)
 
 ```bash
 # pod의 container에 대한 세부 정보를 확인 (IP 주소, 사용된 port 및 pod의 lifecycle과 관련된 event 목록)
