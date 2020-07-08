@@ -8,6 +8,10 @@ Micro Service Architecture mini Project using Kubernetes
 
 ### Container
 
+[![Sources](https://img.shields.io/badge/출처-containerhistory-yellow)](https://pt.slideshare.net/insideHPC/linux-container-technology-101/3)
+
+![containerhistory](images/containerhistory.jpg)
+
 - Container는 격리된 공간에서 process가 동작하는 기술로 가상화 기술의 하나이지만 기존방식과는 차이가 있다.
 - 기존의 가상화 방식은 주로 OS를 가상화하였다. VMware/VirtualBox 같은 VM은 Host OS위에 Guest OS 전체를 가상화하여 사용하는 방식으로 무겁고 느려서 운영환경에선 사용할 수 없다.
 - 이러한 상황을 개선하기 위해 CPU의 가상화 기술(HVM)을 이용한 KVMKernel-based Virtual Machine과 `반가상화(Paravirtualization)` 방식의 Xen이 등장.
@@ -20,9 +24,6 @@ Micro Service Architecture mini Project using Kubernetes
 - docker가 등장하기 전에, process를 격리하는 방법으로 리눅스에서 `cgroupscontrol groups`과 `namespace`를 이용한 `LXCLinux container`가 있었고, FreeBSD의 Jail, Solaris의 Solaris Zones이라는 기술이 있었다.
 - Docker는 LXC를 기반으로 시작해서 0.9버전에서는 자체적인 libcontainer 기술을 사용하였고, 추후 runC기술에 합쳐지게 된다.
 
-[![Sources](https://img.shields.io/badge/출처-containerhistory-yellow)](https://pt.slideshare.net/insideHPC/linux-container-technology-101/3)
-![containerhistory](images/containerhistory.jpg)
-
 ### Image
 
 ![docker_image](images/docker_image.jpg)
@@ -30,7 +31,7 @@ Micro Service Architecture mini Project using Kubernetes
 - Image는 Container 실행에 필요한 파일과 설정 값등을 포함하고 있는 것으로 상태값을 가지지 않고 변하지 않는다(`Immutable`).
 - Container는 Image를 실행한 상태라고 볼 수 있고, 추가되거나 변하는 값은 container에 저장된다.
 - 같은 image에서 여러 개의 container를 생성할 수 있고, container의 상태가 바뀌거나 삭제되어도 image는 변하지 않고 그대로 남아있다.
-- Docker Image는 Docker Hub [![Sources](https://img.shields.io/badge/출처-DockerHub-yellow)](https://hub.docker.com)에 등록하거나 Docker Registry 저장소 [![Sources](https://img.shields.io/badge/출처-DockerRegistry-yellow)](https://docs.docker.com/registry/)를 직접 만들어 관리할 수 있다.
+- Docker Image는 Docker Hub [![Sources](https://img.shields.io/badge/참고-DockerHub-yellow)](https://hub.docker.com)에 등록하거나 Docker Registry 저장소 [![Sources](https://img.shields.io/badge/참고-DockerRegistry-yellow)](https://docs.docker.com/registry/)를 직접 만들어 관리할 수 있다.
 
 ![imageurl](images/imageurl.png)
 
