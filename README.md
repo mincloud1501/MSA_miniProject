@@ -1,6 +1,74 @@
 # MSA_miniProject
 Micro Service Architecture mini Project using Kubernetes
 
+# Docker
+
+- Kubernetes(이하 k8s)에 알아보기 전, Docker에 대해 간단히 정리해 보자.
+- Docker란, `컨테이너 기반의 오픈소스 가상화 플랫폼`이다.
+
+### Container
+
+- Container는 격리된 공간에서 process가 동작하는 기술로 가상화 기술의 하나이지만 기존방식과는 차이가 있다.
+- 기존의 가상화 방식은 주로 OS를 가상화하였다. VMware/VirtualBox 같은 VM은 Host OS위에 Guest OS 전체를 가상화하여 사용하는 방식으로 무겁고 느려서 운영환경에선 사용할 수 없다.
+- 이러한 상황을 개선하기 위해 CPU의 가상화 기술(HVM)을 이용한 KVMKernel-based Virtual Machine과 `반가상화(Paravirtualization)` 방식의 Xen이 등장.
+- Guest OS가 필요하긴 하지만 전체 OS를 가상화하는 방식이 아니기 때문에, 호스트형 가상화 방식에 비해 성능이 향상되어 OpenStack, AWS, Rackspace와 같은 Cloud Service에서 가상 컴퓨팅 기술의 기반이 되게 된다.
+
+- 전가상화든 반가상화든 추가적인 OS를 설치하여 가상화하는 방법은 성능문제가 있어 이를 개선하기 위해 프로세스를 격리하는 방식이 등장함.
+- Linux에서는 이 방식을 `Linux Container`라하고 단순히 프로세스를 격리시키기 때문에 가볍고 빠르게 동작한다.
+- CPU나 Memory는 Process가 필요한 만큼만 추가로 사용하고, 성능적으로도 거의 손실이 없다.
+
+- docker가 등장하기 전에, process를 격리하는 방법으로 리눅스에서 `cgroupscontrol groups`과 `namespace`를 이용한 `LXCLinux container`가 있었고, FreeBSD의 Jail, Solaris의 Solaris Zones이라는 기술이 있었다.
+- Docker는 LXC를 기반으로 시작해서 0.9버전에서는 자체적인 libcontainer 기술을 사용하였고, 추후 runC기술에 합쳐지게 된다.
+
+[![Sources](https://img.shields.io/badge/출처-containerhistory-yellow)](https://pt.slideshare.net/insideHPC/linux-container-technology-101/3)
+![containerhistory](images/containerhistory.jpg)
+
+### Image
+
+![docker_image](images/docker_image.jpg)
+
+- Image는 Container 실행에 필요한 파일과 설정 값등을 포함하고 있는 것으로 상태값을 가지지 않고 변하지 않는다(`Immutable`).
+- Container는 Image를 실행한 상태라고 볼 수 있고, 추가되거나 변하는 값은 container에 저장된다.
+- 같은 image에서 여러 개의 container를 생성할 수 있고, container의 상태가 바뀌거나 삭제되어도 image는 변하지 않고 그대로 남아있다.
+- Docker Image는 Docker Hub [![Sources](https://img.shields.io/badge/출처-DockerHub-yellow)](https://hub.docker.com)에 등록하거나 Docker Registry 저장소 [![Sources](https://img.shields.io/badge/출처-DockerRegistry-yellow)](https://docs.docker.com/registry/)를 직접 만들어 관리할 수 있다.
+
+![imageurl](images/imageurl.png)
+
+- Image는 url방식으로 관리하며 태그를 붙일 수 있다. ubuntu 14.04 이미지는 docker.io/library/ubuntu:14.04 또는 docker.io/library/ubuntu:trusty 이고 docker.io/library는 생략 가능하여 ubuntu:14.04로 사용할 수 있으며, tag 기능을 잘 이용하여 test나 rollback 쉽게 할 수 있다.
+
+### Layer
+
+![imagelayer](images/imagelayer.png)
+
+- Docker Image는 Container를 실행하기 위한 모든 정보를 가지고 있기 때문에, 보통 용량이 수백MB로 다시 다운받을 시 매우 비효율적일 수 밖에 없다.
+- 이런 문제를 해결하기 위해 `Layer`라는 개념을 사용하고 Union File System을 이용하여 여러 개의 레이어를 하나의 Filesystem으로 사용할 수 있게 해준다.
+- Container를 생성할 때도 Layer 방식을 사용하는데, 기존의 image layer 위에 read-write layer를 추가한다. image layer를 그대로 사용하면서 container가 실행 중에 생성하는 파일이나 변경된 내용은 read-write layer에 저장되므로, 여러 개의 container를 생성해도 최소한의 용량만 사용하게 된다.
+
+### Dockerfile
+
+- Docker는 image를 만들기 위해 Dockerfile에 자체 DSLDomain-Specific Language를 이용하여 이미지 생성 과정을 기술한다.(선언한다)
+- 서버에 어떤 프로그램을 설치하려고 여러 의존성 패키지를 설치하고 설정파일을 만들지 않고, Dockerfile로 관리하면 된다.
+
+![dockerfile](images/dockerfile.png)
+
+```bash
+# vertx/vertx3 debian version
+FROM subicura/vertx3:3.3.1
+MAINTAINER chungsub.kim@purpleworks.co.kr
+
+ADD build/distributions/app-3.3.1.tar /
+ADD config.template.json /app-3.3.1/bin/config.json
+ADD docker/script/start.sh /usr/local/bin/
+RUN ln -s /usr/local/bin/start.sh /start.sh
+
+EXPOSE 8080
+EXPOSE 7000
+
+CMD ["start.sh"]
+```
+
+---
+
 ☞ 하기 모든 내용의 출처는 [![Sources](https://img.shields.io/badge/출처-Kubernetes-yellow)](https://kubernetes.io/ko/docs/home/)
 
 ![Kubernetes](images/container_evolution.png)
