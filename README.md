@@ -1,14 +1,18 @@
 # MSA_miniProject
 Micro Service Architecture mini Project using Kubernetes
 
-# Docker
+## Docker [![Sources](https://img.shields.io/badge/출처-DockerContainer-yellow)](https://www.linkedin.com/pulse/docker-kubernetes-security-principles-practices-dr-rabi-prasad-padhy)
 
-- Kubernetes(이하 k8s)에 알아보기 전, Docker에 대해 간단히 정리해 보자.
+- Kubernetes(이하 k8s)에 대해 알아보기 전, Docker에 대해 간단히 정리해 보자.
 - Docker란, `컨테이너 기반의 오픈소스 가상화 플랫폼`이다.
 
-### Container
+[Docker Client-Server Architecture] [![Sources](https://img.shields.io/badge/출처-docsdocker-yellow)](https://docs.docker.com/get-started/overview/)
 
-[![Sources](https://img.shields.io/badge/출처-containerhistory-yellow)](https://pt.slideshare.net/insideHPC/linux-container-technology-101/3)
+![dockerarchitecture](images/dockerarchitecture.jpg)
+
+- Docker Client와 Docker Server로 나뉘어있고 그 사이에 REST API로 소통을 한다. 결국 client는 요청을 할뿐 build, run, push등은 실질적인 작업은 다 데몬(server)이 수행한다.
+
+### Container [![Sources](https://img.shields.io/badge/출처-containerhistory-yellow)](https://pt.slideshare.net/insideHPC/linux-container-technology-101/3)
 
 ![containerhistory](images/containerhistory.jpg)
 
@@ -24,6 +28,19 @@ Micro Service Architecture mini Project using Kubernetes
 - docker가 등장하기 전에, process를 격리하는 방법으로 리눅스에서 `cgroupscontrol groups`과 `namespace`를 이용한 `LXCLinux container`가 있었고, FreeBSD의 Jail, Solaris의 Solaris Zones이라는 기술이 있었다.
 - Docker는 LXC를 기반으로 시작해서 0.9버전에서는 자체적인 libcontainer 기술을 사용하였고, 추후 runC기술에 합쳐지게 된다.
 
+[Namespace]
+
+![namespace](images/namespace.jpg)
+
+- Namespace는 container에 경량 프로세스 가상화를 제공하는 Kernel 기능으로, docker가 container에 대해 resource(process ID, host name, user ID, network access, IPC, file system)를 분리하는 데 도움이 된다.
+- Namespace 밖에 있는 모든 것을 숨기는 process에 "view" 기능을 제공할 수 있게 해주므로, 프로세스가 다른 프로세스를 보거나 간섭할 수 없는 고유한 환경을 제공한다.
+
+[Docker Container]
+
+- Docker Image에서 시작된 Docker Container는 OS, User-added files, Meta-data로 구성된다. docker container가 실행되면 image 위에 read-write layer가 추가된다.
+
+![dockercontainer](images/dockercontainer.jpg)
+
 ### Image
 
 ![docker_image](images/docker_image.jpg)
@@ -31,11 +48,16 @@ Micro Service Architecture mini Project using Kubernetes
 - Image는 Container 실행에 필요한 파일과 설정 값등을 포함하고 있는 것으로 상태값을 가지지 않고 변하지 않는다(`Immutable`).
 - Container는 Image를 실행한 상태라고 볼 수 있고, 추가되거나 변하는 값은 container에 저장된다.
 - 같은 image에서 여러 개의 container를 생성할 수 있고, container의 상태가 바뀌거나 삭제되어도 image는 변하지 않고 그대로 남아있다.
-- Docker Image는 Docker Hub [![Sources](https://img.shields.io/badge/참고-DockerHub-yellow)](https://hub.docker.com)에 등록하거나 Docker Registry 저장소 [![Sources](https://img.shields.io/badge/참고-DockerRegistry-yellow)](https://docs.docker.com/registry/)를 직접 만들어 관리할 수 있다.
 
 ![imageurl](images/imageurl.png)
 
 - Image는 url방식으로 관리하며 태그를 붙일 수 있다. ubuntu 14.04 이미지는 docker.io/library/ubuntu:14.04 또는 docker.io/library/ubuntu:trusty 이고 docker.io/library는 생략 가능하여 ubuntu:14.04로 사용할 수 있으며, tag 기능을 잘 이용하여 test나 rollback 쉽게 할 수 있다.
+
+![dockerregistry](images/dockerregistry.jpg)
+
+- Docker Image는 Docker Hub [![Sources](https://img.shields.io/badge/참고-DockerHub-yellow)](https://hub.docker.com)에 등록하거나 Docker Registry 저장소 [![Sources](https://img.shields.io/badge/참고-DockerRegistry-yellow)](https://docs.docker.com/registry/)를 직접 만들어 관리할 수 있다.
+- Registry는 Docker Client가 repository에서 image를 얻기 위해 사용하는 `Repository + Index+Access Contriol Rule + API`의 집합이다. 주요 container registry로는 Docker Hub, ECR , JFrog 아티팩트 저장소, Google Container Registry 등이 있다.
+
 
 ### Layer
 
@@ -44,6 +66,9 @@ Micro Service Architecture mini Project using Kubernetes
 - Docker Image는 Container를 실행하기 위한 모든 정보를 가지고 있기 때문에, 보통 용량이 수백MB로 다시 다운받을 시 매우 비효율적일 수 밖에 없다.
 - 이런 문제를 해결하기 위해 `Layer`라는 개념을 사용하고 Union File System을 이용하여 여러 개의 레이어를 하나의 Filesystem으로 사용할 수 있게 해준다.
 - Container를 생성할 때도 Layer 방식을 사용하는데, 기존의 image layer 위에 read-write layer를 추가한다. image layer를 그대로 사용하면서 container가 실행 중에 생성하는 파일이나 변경된 내용은 read-write layer에 저장되므로, 여러 개의 container를 생성해도 최소한의 용량만 사용하게 된다.
+
+![unionfilesystem](images/unionfilesystem.png)
+
 
 ### Dockerfile
 
@@ -212,14 +237,14 @@ kubectl create -f ./service.yaml
 
 ---
 
-### Component (Master/Node)
+## Component (Master/Node)
 
 ![Kubernetes_Architecture](images/kubernetes_architecture.jpg)
 
 ![Kubernetes_Component](images/components-of-kubernetes.png)
 
 
-#### Master Component
+### Master Component
 
 `kube-apiserver`
 
@@ -251,7 +276,7 @@ kubectl create -f ./service.yaml
 - cloud-controller-manager binary는 k8s release 1.6에서 도입된 alpha 기능
 - cloud vendor code와 k8s code가 서로 독립적으로 발전시켜 나갈 수 있도록 해준다.
 
-#### Node Component
+### Node Component
 
 `kubelet`
 
@@ -316,7 +341,7 @@ spec:				       # 기대되는 obejct의 상태
         - containerPort: 80
 ```
 
-### Pod
+## Pod
 
 - Pod은 K8s가 상태유지를 위해 사용하는 가장 작은 배포 단위를 의미한다. (최소단위가 Container가 아님)
 - Pod에 속한 container는 storage와 network를 공유하고 서로 localhost로 접근할 수 있다.
@@ -324,7 +349,7 @@ spec:				       # 기대되는 obejct의 상태
 
 ![pod](images/pod.png)
 
-#### Pod 생성하기 [![Sources](https://img.shields.io/badge/출처-Core_Kubernetes-yellow)](https://blog.heptio.com/core-kubernetes-jazz-improv-over-orchestration-a7903ea92ca)
+### Pod 생성하기 [![Sources](https://img.shields.io/badge/출처-Core_Kubernetes-yellow)](https://blog.heptio.com/core-kubernetes-jazz-improv-over-orchestration-a7903ea92ca)
 
 ![pod_process](images/pod_process.png)
 
@@ -334,7 +359,7 @@ spec:				       # 기대되는 obejct의 상태
 - 해당 Node의 Kubelet은 생성할 Pod 정보를 watch해서 Docker Container를 실행하고 결과를 API Server에 지속적으로 update
 - API Server는 전달받은 Pod의 State를 etcd에 update
 
-### ReplicaSet
+## ReplicaSet
 
 - ReplicaSet은 Pod (Object)을 복제 생성하고, 복제된 Pod의 개수를 (Spec에 정의된 개수만큼) 지속적으로 유지하는 Object이다.
 - 직접적으로 ReplicaSet을 사용하기보다는 Deployment등 다른 object에 의해서 사용되는 경우가 많다.
@@ -342,14 +367,14 @@ spec:				       # 기대되는 obejct의 상태
 
 ![replicaset](images/replicaset1.png)
 
-#### ReplicaSet 생성하기 [![Sources](https://img.shields.io/badge/출처-The_DevOps_2.3_Toolkit-yellow)](https://leanpub.com/the-devops-2-3-toolkit)
+### ReplicaSet 생성하기 [![Sources](https://img.shields.io/badge/출처-The_DevOps_2.3_Toolkit-yellow)](https://leanpub.com/the-devops-2-3-toolkit)
 
 ![replicaset_process](images/replicaset_process.png)
 
 - kubectl create 명령으로 ReplicaSet 생성을 요청하면 다음과 같이 ReplicaSet을 생성하고, ReplicaSet Controller에 의해서 Pod을 생성한다.
 - 모든 상태는 Etcd에 저장되고 ReplicaSet Controller, Scheduler, Kubelet등은 Etcd에 바로 접근하는 것이 아니고 API Server를 경유해서 Etcd의 데이터에 접근한다.
 
-### Service [![Sources](https://img.shields.io/badge/출처-medium-yellow)](https://medium.com/google-cloud/kubernetes-nodeport-vs-loadbalancer-vs-ingress-when-should-i-use-what-922f010849e0)
+## Service [![Sources](https://img.shields.io/badge/출처-medium-yellow)](https://medium.com/google-cloud/kubernetes-nodeport-vs-loadbalancer-vs-ingress-when-should-i-use-what-922f010849e0)
 
 - Network와 관련된 Object로 Pod를 외부 네트워크와 연결해주고, 여러 개의 Pod을 바라보는 내부 Load Balancer를 생성할 때 사용한다.
 - 내부 DNS에 Service Name을 Domain으로 등록하기 때문에 Service Discovery 역할도 담당한다.
@@ -450,7 +475,7 @@ spec:
 - 동일한(보통 HTTP) L7 Protocol을 사용하는 여러 service들을 같은 IP 주소로 외부에 노출한다면 Ingress가 가장 유용할 것이다.
 - Native GCP integration을 사용한다면, 단 하나의 Load Balancer만 지불하면 되고, ingress는 smart하기 때문에 (SSL, Auth, Routing과 같은) 다양한 기능들을 활용할 수 있다.
 
-### Volume [![Sources](https://img.shields.io/badge/출처-kubernetes-yellow)](https://kubernetes.io/ko/docs/concepts/storage/volumes)
+## Volume [![Sources](https://img.shields.io/badge/출처-kubernetes-yellow)](https://kubernetes.io/ko/docs/concepts/storage/volumes)
 
 - 저장소와 관련된 Object로 Host Directory를 그대로 사용할 수도 있고, EBS(ElasticBlockStore) 같은 Storage를 동적으로 생성하여 사용할 수도 있다.
 - Container내의 Disk에 있는 file은 임시적이며, container에서 실행될 때 app에 적지 않은 몇 가지 문제가 발생한다.
@@ -1121,7 +1146,7 @@ kubernetes-bootcamp-7d6f8694b6-z2t5n   1/1     Running   0          21s
 
 ---
 
-### Management Platform
+## Management Platform
 
 Docker 및 k8s cluster를 배포 관리할 수 있는 플랫폼들을 알아보자.
 
