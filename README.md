@@ -43,8 +43,6 @@ Micro Service Architecture mini Project using Kubernetes
 
 ### Image
 
-![docker_image](images/docker_image.jpg)
-
 - Image는 Container 실행에 필요한 파일과 설정 값등을 포함하고 있는 것으로 상태값을 가지지 않고 변하지 않는다(`Immutable`).
 - Container는 Image를 실행한 상태라고 볼 수 있고, 추가되거나 변하는 값은 container에 저장된다.
 - 같은 image에서 여러 개의 container를 생성할 수 있고, container의 상태가 바뀌거나 삭제되어도 image는 변하지 않고 그대로 남아있다.
@@ -109,6 +107,7 @@ CMD ["start.sh"]
 - Kubernetes is a portable, extensible, open-source platform for managing containerized workloads(Pods, Replicaset..) and services. (쿠버네티스는 컨테이너화된 워크로드와 서비스를 관리하기 위한 이식성이 있고, 확장가능한 오픈소스 플랫폼이다.)
 - application을 배포하기 위해 desired state를 다양한 object에 라벨Label을 붙여 정의(yaml)하고 API 서버에 전달하는 방식을 사용
 - kube는 Deployment, StatefulSets, DaemonSet, Job, CronJob등 다양한 배포 방식을 지원
+- k8s는 GO 언어로 구현되어 있어 Vendor나 Platform에 종속되지 않기 때문에, 대부분의 Public Cloud(Google,Amazon,Azure)등에 사용이 가능하고 Openstack과 같은 Private Cloud 구축 환경이나 Baremetal(가상화 환경을 사용하지 않는 일반 서버 하드웨어)에도 배포가 가능하다.
 
 [Kubernetes Architecture & Ecosystem] [![Sources](https://img.shields.io/badge/출처-learnitguide-yellow)](https://www.learnitguide.net/2018/08/what-is-kubernetes-learn-kubernetes.html) [![Sources](https://img.shields.io/badge/출처-magalix-yellow)](https://www.magalix.com/blog/kubernetes-101-concepts-and-why-it-matters)
 
@@ -304,12 +303,13 @@ kubectl create -f ./service.yaml
 ## Object
 
 - Kubernetes의 Input은 Action이 아니라 `Desired State`이다.
+- Object들은 모두 object의 특성(설정정보)을 기술한 `Object Spec`으로 정의가 되고, command line을 통해서 object 생성시 인자로 전달하여 정의를 하거나 `yaml` 또는 `json` 파일로 spec을 정의할 수 있다.
 
 ```
 Additionally, Kubernetes is not a mere orchestration system. In fact, it eliminates the need for orchestration. The technical definition of orchestration is execution of a defined workflow: first do A, then B, then C. In contrast, Kubernetes is comprised of a set of independent, composable control processes that continuously drive the current state towards the provided desired state. It shouldn’t matter how you get from A to C.
 ```
 
-- k8s object는 cluster의 `status`를 관리하기 위한 Entity이다. (`Pod/ReplicaSet/Service/Volume`)
+- k8s object는 cluster의 `status`를 관리하기 위한 Entity며, 기본적으로 컨테이너화되어 배포되는 application의 workload를 기술하는 object로 `Pod/ReplicaSet/Service/Volume`가 있다.
 	- 어떤 컨테이너화된 application이 동작 중인지 (그리고 어느 node에서 동작 중인지)
 	- 그 application이 이용할 수 있는 resource
 	- 그 application이 어떻게 재구동 정책, upgrade, 그리고 내고장성과 같은 것에 동작해야 하는지에 대한 정책
@@ -349,6 +349,10 @@ spec:				       # 기대되는 obejct의 상태
 
 ![pod](images/pod.png)
 
+- Pod 내의 container는 IP와 Port를 공유하여 두 개의 container가 하나의 Pod를 통해서 배포되었을때, localhost를 통해서 통신이 가능하다. (ex. container A가 8080, container B가 7001로 배포가 되었을 때, B에서 A를 호출할 때는 localhost:8080으로 호출하면 되고, 반대로 A에서 B를 호출할 때는 localhost:7001로 호출하면 된다.
+- Pod 내에 배포된 container간에는 disk volume을 공유할 수 있다. application(Tomcat, node.js)과 로그 수집기를 다른 container로 배포할 경우, container에 의해서 file system이 분리되기 때문에, 로그 수집기가 application이 배포된 container의 로그파일을 읽는 것이 불가능하지만, k8s의 경우 하나의 Pod 내에서는 container들끼리 volume을 공유할 수 있기 때문에 다른 container의 파일을 읽어올 수 있다.
+
+
 ### Pod 생성하기 [![Sources](https://img.shields.io/badge/출처-Core_Kubernetes-yellow)](https://blog.heptio.com/core-kubernetes-jazz-improv-over-orchestration-a7903ea92ca)
 
 ![pod_process](images/pod_process.png)
@@ -374,9 +378,10 @@ spec:				       # 기대되는 obejct의 상태
 - kubectl create 명령으로 ReplicaSet 생성을 요청하면 다음과 같이 ReplicaSet을 생성하고, ReplicaSet Controller에 의해서 Pod을 생성한다.
 - 모든 상태는 Etcd에 저장되고 ReplicaSet Controller, Scheduler, Kubelet등은 Etcd에 바로 접근하는 것이 아니고 API Server를 경유해서 Etcd의 데이터에 접근한다.
 
+
 ## Service [![Sources](https://img.shields.io/badge/출처-medium-yellow)](https://medium.com/google-cloud/kubernetes-nodeport-vs-loadbalancer-vs-ingress-when-should-i-use-what-922f010849e0)
 
-- Network와 관련된 Object로 Pod를 외부 네트워크와 연결해주고, 여러 개의 Pod을 바라보는 내부 Load Balancer를 생성할 때 사용한다.
+- Network와 관련된 Object로 Pod를 외부 네트워크와 연결해 주고, 여러 개의 Pod을 바라보는 내부 Load Balancer를 생성할 때 사용한다.
 - 내부 DNS에 Service Name을 Domain으로 등록하기 때문에 Service Discovery 역할도 담당한다.
 
 ```bash
@@ -438,6 +443,11 @@ spec:
 - 지정한 port의 모든 traffic은 service로 forwarding 될 것이다. filtering이나 routing 같은건 전혀 없다. 거의 모든 traffic protocol을 사용할 수 있다.
 - 가장 큰 단점은 LoadBalancer로 노출하고자 하는 각 서비스마다 자체의 IP 주소를 갖는 것과, 노출하는 서비스마다 LoadBalancer 비용을 지불해야 하기 때문에 값이 비싸진다.
 
+- 추가/삭제된 Pod 목록을 load balancer가 유연하게 선택해 줘야 할 때 `label`과 `label selector`를 사용한다.
+	- `Label Selector` : 서비스를 정의할 때, 어떤 Pod를 service로 묶을 것인지를 정의. 각 Pod를 생성할 때 Metadata 정보 부분에 label을 정의할 수 있다. service는 label selector에서 특정 label을 가지고 있는 Pod만 선택하여 service에 묶게 된다.
+	- `Label` : k8s의 resource를 선택하는데 사용이 된다. 각 resource는 label을 가질 수 있고, label 검색 조건에 따라서 특정 label을 가지고 있는 resource만 선택할 수 있다. 또한, metadata section에 key/value pair로 정의가 가능하며, 하나의 resource에는 하나의 label이 아니라 여러 label을 동시에 적용할 수 있다.
+
+
 #### [Case 4] : Ingress 사용하기
 
 - 여러 service들 앞단에서 `Smart Router` 역할을 하거나, cluster의 `Entrypoint` 역할을 한다.
@@ -477,10 +487,20 @@ spec:
 
 ## Volume [![Sources](https://img.shields.io/badge/출처-kubernetes-yellow)](https://kubernetes.io/ko/docs/concepts/storage/volumes)
 
+- Pod가 기동할 때, default로 container마다 lcoal disk를 생성해서 기동되는데, 이 local disk의 경우에는 영구적이지 않다. 즉, container가 restart되거나 새로 배포될 때 마다 local disk는 Pod의 설정에 따라서 새롭게 정의되서 배포되기 때문에, disk에 기록된 내용이 유실된다.
+- DB와 같이 영구적으로 파일을 저장해야 하는 경우에는, container restart에 상관없이 파일을 영속적으로 저장애햐 하는데, 이러한 형태의 storage를 volume이라고 한다. 
+- Volume은 container의 외장 disk의 개념으로 Pod가 기동할 때 container에 mount해서 사용한다.
 - 저장소와 관련된 Object로 Host Directory를 그대로 사용할 수도 있고, EBS(ElasticBlockStore) 같은 Storage를 동적으로 생성하여 사용할 수도 있다.
-- Container내의 Disk에 있는 file은 임시적이며, container에서 실행될 때 app에 적지 않은 몇 가지 문제가 발생한다.
-	- 첫째, container가 충돌되면, kubelet은 container를 재시작하지만, container는 초기 상태로 시작되기 때문에 기존 파일이 유실된다.
-	- 둘째, Pod에서 container를 함께 실행할 때 container간에 file을 공유해야 하는 경우 `volume 추상화`로 이 두 가지 문제를 모두 해결해 준다.
+
+
+- Web Server를 배포하는 Pod가 있을 때, web service를 service하는 Web server container, content의 내용(/htdocs)를 update하고 관리하는 Content mgmt container, log msg를 관리하는 Logger라는 container가 있다고 가정할 때, htdocs content directory는 WebServer와 Content container가 공유해야 하고 logs directory는 Webserver와 Logger container가 공유해야 한다. 이러한 시나리오에서 Volume을 사용할 수 있다.
+	- Web Server container는 htdocs directory의 container를 service하고, /logs directory에 web access log를 기록한다.
+	- Content container는 htdocs directory의 content를 update하고 관리한다.
+	- Logger container는 logs directory의 log를 수집한다.
+
+![volume](images/volume.png)
+ 
+- k8s는 다양한 외장 disk를 추상화된 형태로 제공한다. iSCSI나 NFS와 같은 Onprem 기반의 일반적인 외장 storage 외에도, cloud의 외장 storage인 AWS EBS, Google PD,에서 부터  github, glusterfs와 같은 다양한 opensource 기반의 외장 storage나 storage service를 지원하여, storage architecture 설계에 다양한 옵션을 제공한다.
 
 [AWS EBS 구성 예시]
 
@@ -503,6 +523,49 @@ spec:
       volumeID: <volume-id>
       fsType: ext4
 ```
+
+## Controller
+
+- 4개의 기본 object로 application을 설정하고 배포하는 것이 가능한데 이를 조금 더 편리하게 관리하기 위해서 k8s는 controller라는 개념을 사용한다.
+- Controller는 기본 object들을 생성하고 이를 관리하는 역할을 해주며, `Replication Controller(aka RC)`, `Replication Set`, `DaemonSet`, `Job`, `StatefulSet`, `Deployment` 들이 있다.
+
+#### Replication Controller
+
+- Pod를 관리해주는 역할을 하는데, 지정된 숫자로 Pod를 기동 시키고, 관리하는 역할을 한다. 
+- 크게 3가지 파트로 구성되는데, `Replica의 수`, `Pod Selector`, `Pod Template` 3가지로 구성된다.
+	- `Pod Selector` : label을 기반으로 하여, RC가 관리한 Pod를 가지고 오는데 사용한다.
+	- `Replica 수` :  RC에 의해서 관리되는 Pod의 수인데, 그 숫자만큼 Pod 의 수를 유지하도록 한다. 
+	- `Pod template` : Pod를 추가로 기동할 때 어떻게 Pod를 만들지 Pod에 대한 정보(docker image, port, label 등)에 대한 정보를 정의한다.
+
+#### Replica Set
+
+- ReplicaSet은 Replication Controller의 신규 버전으로 큰 차이는 없고, Replication Controller는 Equality 기반 Selector를 이용하는데 반해, Replica Set은 Set 기반의 Selector를 이용한다. 
+
+#### Deployment
+
+- Deployment는 Replication controller와 Replica Set 보다 상위 추상화 개념이다. 실제 운영에서는 ReplicaSet이나 Replication Controller를 바로 사용하는 것보다 Deloyment를 사용하게 된다.
+
+[쿠버네티스 배포 방식]
+
+☞ Blue/Green Deployment (무중단 배포 방식)
+
+- Blue(Old) version으로 서비스하고 있던 시스템을 Green(New) version을 배포한 후, traffic을 blue에서 green으로 한 번에 변경하는 방식이다.
+- 새로운 RC을 만들어서 새로운 template으로 Pod를 생성한 후에, Pod 생성이 끝나면 service를 새로운 Pod로 옮기는 방식이다.
+
+![bluegreen](images/bluegreen.gif)
+
+☞ Canary Deployment (배포 실패에 대한 Risk 최소화)
+
+![canary](images/canary.gif)
+
+☞ Rollong Upgrade
+
+- Pod를 하나씩 upgrade 해가는 방식으로 먼저 새로운 RC를 만든 후, 기존 RC에서 replica 수를 하나 줄이고, 새로운 RC에는 replica 수를 하나만 늘려준다.
+- Label을 같은 이름으로 해주면 서비스는 자연히 새로운 RC에 의해 생성된 Pod를 서비스에 포함시키면서, 기존 RC의 replica를 하나 더 줄이고, 새로운 RC의  replica를 하나 더 늘린다.
+- 만약 배포에 문제가 생기면, 기존 RC의 replica 수를 원래대로 올리고, 새 버전의 replicat 수를 0으로 만들어서 예전 버전의 Pod로 rollback이 가능하다.
+- 이러한 과정을 자동화하고 추상화한 개념이 `Deployment`로 Pod 배포를 위해서 RC를 생성하고 관리하는 역할을 하며, 특히 rollback을 위한 기존 버전의 RC 관리 등 여러가지 기능을 포괄적으로 포함하고 있다.
+
+![rollingupdate](images/rollingupdate.gif)
 
 ---
 
