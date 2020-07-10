@@ -8,13 +8,15 @@ Micro Service Architecture mini Project using Kubernetes
 
 [Docker Client-Server Architecture] [![Sources](https://img.shields.io/badge/출처-docsdocker-yellow)](https://docs.docker.com/get-started/overview/)
 
-![dockerarchitecture](images/dockerarchitecture.png)
+<p style="text-align: center;"><img src="images/dockerarchitecture.png"/></p>
 
 - Docker Client와 Docker Server로 나뉘어있고 그 사이에 REST API로 소통을 한다. 결국 client는 요청을 할뿐 build, run, push등은 실질적인 작업은 다 데몬(server)이 수행한다.
 
 ### Container
 
-![containerhistory](images/containerhistory.jpg) [![Sources](https://img.shields.io/badge/출처-containerhistory-yellow)](https://pt.slideshare.net/insideHPC/linux-container-technology-101/3)
+[![Sources](https://img.shields.io/badge/출처-containerhistory-yellow)](https://pt.slideshare.net/insideHPC/linux-container-technology-101/3)
+
+<p style="text-align: center;"><img src="images/containerhistory.jpg"/></p>
 
 - Container는 격리된 공간에서 process가 동작하는 기술로 가상화 기술의 하나이지만 기존방식과는 차이가 있다.
 - 기존의 가상화 방식은 주로 OS를 가상화하였다. VMware/VirtualBox 같은 VM은 Host OS위에 Guest OS 전체를 가상화하여 사용하는 방식으로 무겁고 느려서 운영환경에선 사용할 수 없다.
@@ -73,7 +75,7 @@ Micro Service Architecture mini Project using Kubernetes
 - Docker는 image를 만들기 위해 Dockerfile에 자체 DSLDomain-Specific Language를 이용하여 이미지 생성 과정을 기술한다.(선언한다)
 - 서버에 어떤 프로그램을 설치하려고 여러 의존성 패키지를 설치하고 설정파일을 만들지 않고, Dockerfile로 관리하면 된다.
 
-![dockerfile](images/dockerfile.png)
+<p style="text-align: center;"><img src="images/dockerfile.png"/></p>
 
 ```bash
 # vertx/vertx3 debian version
@@ -240,10 +242,10 @@ kubectl create -f ./service.yaml
 
 ## Component (Master/Node)
 
-![Kubernetes_Architecture](images/kubernetes_architecture.jpg)
-
-![Kubernetes_Component](images/components-of-kubernetes.png)
-
+<p style="text-align: center;">
+	<img src="images/kubernetes_architecture.jpg"/>
+	<img src="images/components-of-kubernetes.png"/>
+</p>
 
 ### Master Component
 
@@ -356,7 +358,8 @@ spec:				       # 기대되는 obejct의 상태
 - Pod에 속한 container는 storage와 network를 공유하고 서로 localhost로 접근할 수 있다.
 - Pod을 알맞은 Node에 효율적으로 배치하고, 사용자가 기대하는 상태로 문제없이 실행되도록 Pod이 죽으면 다시 살려주거나, Node가 죽으면 기존 Node의 Pod을 다른 건강한 Node에 배치하는 등 Pod의 Life Cycle을 관리하는 것이 K8s의 가장 큰 역할 중 하나이다.
 
-![pod](images/pod.png)
+<p style="text-align: center;"><img src="images/pod.png"/></p>
+
 
 - Pod 내의 container는 IP와 Port를 공유하여 두 개의 container가 하나의 Pod를 통해서 배포되었을때, localhost를 통해서 통신이 가능하다. (ex. container A가 8080, container B가 7001로 배포가 되었을 때, B에서 A를 호출할 때는 localhost:8080으로 호출하면 되고, 반대로 A에서 B를 호출할 때는 localhost:7001로 호출하면 된다.
 - Pod 내에 배포된 container간에는 disk volume을 공유할 수 있다. application(Tomcat, node.js)과 로그 수집기를 다른 container로 배포할 경우, container에 의해서 file system이 분리되기 때문에, 로그 수집기가 application이 배포된 container의 로그파일을 읽는 것이 불가능하지만, k8s의 경우 하나의 Pod 내에서는 container들끼리 volume을 공유할 수 있기 때문에 다른 container의 파일을 읽어올 수 있다.
@@ -364,7 +367,7 @@ spec:				       # 기대되는 obejct의 상태
 
 ### Pod 생성하기 [![Sources](https://img.shields.io/badge/출처-Core_Kubernetes-yellow)](https://blog.heptio.com/core-kubernetes-jazz-improv-over-orchestration-a7903ea92ca)
 
-![pod_process](images/pod_process.png)
+<p style="text-align: center;"><img src="images/pod_process.png" style="width: 700px; height: 400px" /></p>
 
 - kubectl은 API Server에 Pod 생성을 요청
 - API Server는 etcd에 Node에 할당되지 않은 Pod가 있음을 update
@@ -378,11 +381,13 @@ spec:				       # 기대되는 obejct의 상태
 - 직접적으로 ReplicaSet을 사용하기보다는 Deployment등 다른 object에 의해서 사용되는 경우가 많다.
 - ReplicaSet은 Pod의 Replication 관리만 한다. ReplicaSet에 의해 3개의 Pod이 실행 중인 상태에서 ReplicaSet을 삭제하면, 해당 ReplicaSet의 관리 대상이었던 Pod은 삭제되지 않고 실행상태로 유지 가능하다. (ReplicaSet이 Pod을 소유하는 개념이 아닌, 특정한 Label Selector Rule에 따라 Pod의 개수/상태를 유지하는 역할만 수행)
 
-![replicaset](images/replicaset1.png)
+
+<p style="text-align: center;"><img src="images/replicaset1.png" style="width: 400px; height: 300px" /></p>
+
 
 ### ReplicaSet 생성하기 [![Sources](https://img.shields.io/badge/출처-The_DevOps_2.3_Toolkit-yellow)](https://leanpub.com/the-devops-2-3-toolkit)
 
-![replicaset_process](images/replicaset_process.png)
+<p style="text-align: center;"><img src="images/replicaset_process.png" style="width: 800px; height: 500px" /></p>
 
 - kubectl create 명령으로 ReplicaSet 생성을 요청하면 다음과 같이 ReplicaSet을 생성하고, ReplicaSet Controller에 의해서 Pod을 생성한다.
 - 모든 상태는 Etcd에 저장되고 ReplicaSet Controller, Scheduler, Kubelet등은 Etcd에 바로 접근하는 것이 아니고 API Server를 경유해서 Etcd의 데이터에 접근한다.
@@ -447,14 +452,14 @@ spec:
 - Service를 debugging하거나 어떤 이유로 PC에서 직접 접근할 때, 내부 dashboard 표시 등 내부 traffic을 허용할 때 사용한다.
 - 이 방식에서는 권한 있는 사용자가 kubectl을 실행해야 하기 때문에, 서비스를 외부에 노출하는데 사용하거나 실서비스에서 사용해서는 안 된다.
 
-![service](images/service.png)
+<p style="text-align: center;"><img src="images/service.png" style="width: 300px; height: 400px" /></p>
 
 #### [Case 2] : NodePort 사용하기
 
 - NodePort Service는 service에 외부 traffic을 직접 보낼 수 있는 가장 원시적인 방법이다.
 - 모든 Node(VM)에 특정 Port를 열어 두고, 이 port로 보내지는 모든 traffic을 service로 forwarding한다.
 
-![nodeport](images/nodeport.png)
+<p style="text-align: center;"><img src="images/nodeport.png" style="width: 300px; height: 400px" /></p>
 
 - Port당 한 Service만 할당할 수 있으며, 30000-32767 사이의 port만 사용할 수 있다. 또한, Node나 VM의 IP 주소가 바뀌면, 이를 반영해 줘야 한다.
 
@@ -479,7 +484,7 @@ spec:
 
 - Service를 Internet에 Expose하는 일반적인 방식으로 GKE에서는 Network Load Balancer를 작동시켜 모든 traffic을 service로 forwarding하는 단 하나의 IP 주소를 제공한다.
 
-![loadbalancer](images/loadbalancer.png)
+<p style="text-align: center;"><img src="images/loadbalancer.png" style="width: 300px; height: 400px" /></p>
 
 - Service를 직접적으로 expose하기를 원한다면, LoadBalancer가 기본적인 방법이다.
 - 지정한 port의 모든 traffic은 service로 forwarding 될 것이다. filtering이나 routing 같은건 전혀 없다. 거의 모든 traffic protocol을 사용할 수 있다.
@@ -492,11 +497,19 @@ spec:
 
 #### [Case 4] : Ingress 사용하기
 
+- k8s에서 HTTP(S)기반의 L7 로드밸런싱 기능을 제공하는 component를 `Ingress`라고 한다.
 - 여러 service들 앞단에서 `Smart Router` 역할을 하거나, cluster의 `Entrypoint` 역할을 한다.
 - 기본 GKE Ingress Controller는 HTTP(S) Load Balancer를 만들어 준다. 백엔드 서비스로 경로(path)와 서브 도메인 기반의 라우팅을 모두 지원한다.
 - 예를 들어, foo.yourdomain.com으로 들어오는 모든 트래픽을 foo 서비스로 보낼 수 있고, yourdomain.com/bar/ 경로로 들어오는 모든 트래픽을 bar 서비스로 보낼 수 있다.
+- Ingress은 여러가지 구현체가 있는데,
+	- Google Cloud의 `Global Load Balancer`
+	- Opensource 구현체로 `nginx` 
+	- 상용 제품으로 `F5 BIG IP Controller`
+	- Opensource API G/W solution인 `Kong`이 Ingress 컨트롤러의 기능을 지원한다.
+- 서비스와 마찬가지로 Ingress 역시 Static IP를 지정할 수 있다.
 
-![ingress](images/ingress.png)
+<p style="text-align: center;"><img src="images/ingress.png" /></p>
+
 
 ```bash
 apiVersion: extensions/v1beta1
@@ -541,7 +554,8 @@ spec:
 	- Content container는 htdocs directory의 content를 update하고 관리한다.
 	- Logger container는 logs directory의 log를 수집한다.
 
-![volume](images/volume.png)
+<p style="text-align: center;"><img src="images/volume.png" style="width: 300px; height: 400px" /></p>
+
  
 - k8s는 다양한 외장 disk를 추상화된 형태로 제공한다. iSCSI나 NFS와 같은 Onprem 기반의 일반적인 외장 storage 외에도, cloud의 외장 storage인 AWS EBS, Google PD,에서 부터  github, glusterfs와 같은 다양한 opensource 기반의 외장 storage나 storage service를 지원하여, storage architecture 설계에 다양한 옵션을 제공한다.
 
@@ -607,7 +621,8 @@ spec:
 
 #### Deployment
 
-- Deployment는 Replication controller와 Replica Set 보다 상위 추상화 개념이다. 실제 운영에서는 ReplicaSet이나 Replication Controller를 바로 사용하는 것보다 Deloyment를 사용하게 된다.
+- Deployment는 Replication controller와 Replica Set 보다 상위 추상화 개념이다. 실제 운영에서는 ReplicaSet이나 Replication Controller를 바로 사용하는 것보다 Deloyment를 사용하는데, Deployment는 기본적으로 RC를 생성하고, 이를 관리하는 역할을 한다.
+
 
 [쿠버네티스 배포 방식] [![Sources](https://img.shields.io/badge/출처-thenewstack-yellow)](https://thenewstack.io/deployment-strategies/)
 
@@ -616,11 +631,13 @@ spec:
 - Blue(Old) version으로 서비스하고 있던 시스템을 Green(New) version을 배포한 후, traffic을 blue에서 green으로 한 번에 변경하는 방식이다.
 - 새로운 RC을 만들어서 새로운 template으로 Pod를 생성한 후에, Pod 생성이 끝나면 service를 새로운 Pod로 옮기는 방식이다.
 
-![bluegreen](images/bluegreen.gif)
+<p style="text-align: center;"><img src="images/bluegreen.gif" style="width: 500px; height: 300px" /></p>
+
 
 ☞ Canary Deployment (배포 실패에 대한 Risk 최소화)
 
-![canary](images/canary.gif)
+<p style="text-align: center;"><img src="images/canary.gif" style="width: 500px; height: 300px" /></p>
+
 
 ☞ Rollong Upgrade
 
@@ -629,7 +646,7 @@ spec:
 - 만약 배포에 문제가 생기면, 기존 RC의 replica 수를 원래대로 올리고, 새 버전의 replicat 수를 0으로 만들어서 예전 버전의 Pod로 rollback이 가능하다.
 - 이러한 과정을 자동화하고 추상화한 개념이 `Deployment`로 Pod 배포를 위해서 RC를 생성하고 관리하는 역할을 하며, 특히 rollback을 위한 기존 버전의 RC 관리 등 여러가지 기능을 포괄적으로 포함하고 있다.
 
-![rollingupdate](images/rollingupdate.gif)
+<p style="text-align: center;"><img src="images/rollingupdate.gif" style="width: 500px; height: 300px" /></p>
 
 #### DaemonSet
 
@@ -680,7 +697,7 @@ spec:
 - k8s는 서로 연결되어서 단일 유닛처럼 동작하는 고가용성의 컴퓨터 클러스터를 상호 조정한다.
 - k8s는 애플리케이션 컨테이너를 클러스터에 분산시키고 스케줄링하는 일을 보다 효율적으로 자동화한다.
 
-![cluster_diagram](images/cluster_diagram.png)
+<p style="text-align: center;"><img src="images/cluster_diagram.png" /></p>
 
 ```bash
 $ minikube version
@@ -715,7 +732,8 @@ To further debug and diagnose cluster problems, use 'kubectl cluster-info dump'.
 - deployment는 application instance를 생성하고 update하는 역할을 담당한다.
 - application이 k8s 상에 배포되려면 지원되는 container 형식 중 하나로 packaging 되어야 한다.
 
-![application_deployment](images/application_deployment.png)
+<p style="text-align: center;"><img src="images/application_deployment.png" /></p>
+
 
 ```bash
 # Check kubectl installed
@@ -909,7 +927,7 @@ $
 
 - k8s `Service`는 논리적 pod set을 정의하고 외부 traffic exposure, load balancing, 그 pod들에 대한 service discovery를 가능하게 해주는 abstract layer이다.
 
-![use_service](images/use_service.png)
+<p style="text-align: center;"><img src="images/use_service.png" style="width: 600px; height: 500px" /></p>
 
 [Step 1] Create a new service
 
@@ -1098,7 +1116,8 @@ Hello Kubernetes bootcamp! | Running on: kubernetes-bootcamp-765bf4c7b4-pfg74 | 
 - kubectl run 명령에 --replicas 파라미터를 사용해서 처음부터 복수의 인스턴스로 구동되는 deployment를 만들 수 있다.
 - deployment의 복제 수를 변경하면 scaling이 수행된다.
 
-![replicaset](images/replicaset.png)
+
+<p style="text-align: center;"><img src="images/replicaset.png" style="width: 600px; height: 500px" /></p>
 
 [Step 1] Scaling a deployment
 
@@ -1213,7 +1232,8 @@ kubernetes-bootcamp-765bf4c7b4-qnn5m   1/1     Running   0          8m30s   172.
 - 롤링 업데이트는 pod instance를 점진적으로 새로운 것으로 update하여 deployment update가 service 중단 없이 이루어질 수 있도록 해준다.
 - deployment가 외부로 노출되면, service는 update가 이루어지는 동안 오직 가용한 pod에게만 traffic을 load-balance 할 것이다.
 
-![rolling_update](images/rolling_update.gif)
+<p style="text-align: center;"><img src="images/rolling_update.gif"/></p>
+
 
 [Step 1] Update the version of the app
 
