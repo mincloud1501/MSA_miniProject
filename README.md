@@ -93,6 +93,8 @@ CMD ["start.sh"]
 
 ---
 
+## Kubernetes (이하 k8s)
+
 ☞ 하기 모든 내용의 출처는 [![Sources](https://img.shields.io/badge/출처-Kubernetes-yellow)](https://kubernetes.io/ko/docs/home/)
 
 ![Kubernetes](images/container_evolution.png)
@@ -275,6 +277,12 @@ kubectl create -f ./service.yaml
 - cloud-controller-manager binary는 k8s release 1.6에서 도입된 alpha 기능
 - cloud vendor code와 k8s code가 서로 독립적으로 발전시켜 나갈 수 있도록 해준다.
 
+`DNS`
+
+- k8s는 resource의 Endpoint를 DNS로 mapping하고 관리한다. Pod나 service등은 IP를 배정받는데 동적으로(그 IP 주소가 그때마다 변경) 생성되는 resource이기 때문에, 그 resource에 대한 위치 정보가 필요한데, 이러한 pattern을 `Service discovery` pattern이라고 하는데, k8s에서는 이를 내부 DNS서버를 두는 방식으로 해결하였다.
+- 새로운 resource가 생기면, 그 resource에 대한 IP와 DNS 이름을 등록하여, DNS 이름을 기반으로 resource에 접근할 수 있도록 한다.
+
+
 ### Node Component
 
 `kubelet`
@@ -292,9 +300,10 @@ kubectl create -f ./service.yaml
 - container 실행을 담당하는 software
 - k8s 여러 container runtime 지원 (Docker,containerd,cri-o,rktlet,Kubernetes CRI를 구현한 모든 software)
 
-![Kubernetes_Cluster](images/cluster.png)
+`cAdvisor`
+- 각 node에서 기동되는 monitoring agent로, node내에서 가동되는 container들의 state와 성능 등의 정보를 수집하여 master server의 API server로 전달한다.
 
-![Kubernetes_Deploy](images/deploy.png)
+![Kubernetes_Cluster](images/cluster.png)
 
 ---
 
@@ -383,6 +392,17 @@ spec:				       # 기대되는 obejct의 상태
 
 - Network와 관련된 Object로 Pod를 외부 네트워크와 연결해 주고, 여러 개의 Pod을 바라보는 내부 Load Balancer를 생성할 때 사용한다.
 - 내부 DNS에 Service Name을 Domain으로 등록하기 때문에 Service Discovery 역할도 담당한다.
+- 지정된 IP로 생성이 가능하고, 여러 Pod를 묶어서 Load Balancing이 가능하며, 고유한 DNS 이름을 가질 수 있다.
+- 동시에 하나의 Port 뿐 아니라, 여러 개의 port를 동시에 지원할 수 있다.
+
+☞ [Service Type]
+
+서비스는 IP 주소 할당 방식과 연동 서비스등에 따라 크게 4가지로 구별할 수 있다.
+
+- Cluster IP (기본 설정 값) : Service에 cluster IP(내부 IP)를 할당한다. k8s cluster 내에서는 이 service에 접근이 가능하지만, cluster 외부에서는 외부 IP를 할당받지 못해 접근이 불가능하다.
+- Load Balancer : 외부 IP를 가지고 있는 Loadbalancer를 할당한다. 외부 IP를 가지고 있기 때문에, cluster 외부에서 접근이 가능하다.
+- NodePort : cluster IP 뿐만 아니라, 모든 node의 IP와 port를 통해서도 접근이 가능하게 된다.
+- ExternalName : 외부 서비스를 k8s 내부에서 호출하고자할 때 사용할 수 있다.
 
 ```bash
 apiVersion: v1
@@ -390,15 +410,37 @@ kind: Service
 metadata:  
   name: my-internal-service
 spec:
-  selector:    
+  selector:
     app: my-app
   type: ClusterIP # ClusterIP는 k8s 기본 서비스로, cluster 내의 다른 app이 접근할 수 있게 해준다. ClusterIP는 외부 접근이 되지 않는다. (Kubernetes Proxy를 통하면 접근 가능)
-  ports:  
+  ports:
   - name: http
     port: 80
-    targetPort: 80
+    targetPort: 8080
+    nodePort: 30036
     protocol: TCP
-```      
+  - name: https
+    port: 443
+    protocol: TCP
+    targetPort: 8082
+  type: LoadBalancer # NodePort
+```
+
+☞ [Headless Service]
+
+- Service는 접근을 위해서 Cluster IP 또는 External IP를 지정받는다. 즉, 서비스를 통해서 제공되는 기능들에 대한 endpoint를 k8s service를 통해서 통제하는 개념인데, MSA에서는 기능 component에 대한 Endpoint(IP 주소)를 찾는 기능을 `Service Discovery`라 한다.
+- 이런 시나리오를 지원하기 위한 k8s의 service를 `Headless Service` 라 하며, Cluster IP등의 주소를 가지지 않는다. 단, DNS 이름을 가지게 되는데, 이 서비스에 연결된 Pod들의 IP 주소들을 리턴하게 된다.
+
+☞ [Service Discovery]
+
+- Service가 생성된 후 `kubectl get svc`를 이용하면 생성된 service와 IP를 받아올 수 있지만 계속해서 변경되는 임시 IP를 가져오게 된다.
+- DNS name을 이용하여 서비스에 접근이 가능한데, DNS에서 리턴해 주는 IP는 외부 IP가 아닌 Cluster IP (내부 IP)이다.
+- k8s cluster에서는 외부 IP를 별도로 관리하지 않기 때문에, External IP를 명시적으로 지정 관리해야 한다.
+
+```bash
+ externalIPs:
+  - 80.11.11.11
+```
 
 #### [Case 1] : Proxy 사용하기
 
@@ -492,6 +534,7 @@ spec:
 - Volume은 container의 외장 disk의 개념으로 Pod가 기동할 때 container에 mount해서 사용한다.
 - 저장소와 관련된 Object로 Host Directory를 그대로 사용할 수도 있고, EBS(ElasticBlockStore) 같은 Storage를 동적으로 생성하여 사용할 수도 있다.
 
+[Use Case]
 
 - Web Server를 배포하는 Pod가 있을 때, web service를 service하는 Web server container, content의 내용(/htdocs)를 update하고 관리하는 Content mgmt container, log msg를 관리하는 Logger라는 container가 있다고 가정할 때, htdocs content directory는 WebServer와 Content container가 공유해야 하고 logs directory는 Webserver와 Logger container가 공유해야 한다. 이러한 시나리오에서 Volume을 사용할 수 있다.
 	- Web Server container는 htdocs directory의 container를 service하고, /logs directory에 web access log를 기록한다.
@@ -524,6 +567,27 @@ spec:
       fsType: ext4
 ```
 
+#### PersistentVolume and PersistentVolumeClaim
+
+- 일반적으로 disk volume을 설정하려면 물리적 disk를 생성해야 한다.
+- k8s는 infra에 종속적인 부분은 시스템 관리자가 설정하도록 하고, 개발자는 이에 대한 이해 없이 간단하게 사용할 수 있도록 disk volume 부분에 `PersistentVolumeClaim (이하 PVC)`과 `PersistentVolume (이하 PV)`라는 개념을 도입하였다.
+	- 시스템 관리자가 실제 물리 disk를 생성한 후에, 이 disk를 PersistentVolume이라는 이름으로 k8s에 등록한다.
+	- 개발자는 Pod를 생성할때, volume을 정의하고 이 volume 정의 부분에 물리적 disk에 대한 특성을 정의하는 것이 아니라 PVC를 지정하여, 관리자가 생성한 PV와 연결한다.
+
+![PersistentVolume](images/persistentvolume.png) [![Sources](https://img.shields.io/badge/출처-velog-yellow)](https://velog.io/)
+
+- 시스템 관리자가 생성한 물리 disk를 k8s cluster에 표현한 것이 PV이고, Pod의 volume과 이 PV를 연결하는 관계가 PVC가 된다.
+- 이때 주의할 점은 volume은 생성된 후에 직접 삭제하지 않으면 삭제되지 않는다. PV의 생명 주기는 k8s cluster에 의해서 관리되면 Pod의 생성 또는 삭제에 상관 없이 별도로 관리된다. (Pod와 상관없이 직접 생성하고 삭제해야 한다.)
+
+### Dynamic Provisioning
+
+- PV를 수동으로 생성한 후 PVC에 바인딩 한 후, Pod에서 사용할 수 있지만 k8s v.1.6부터는 `Dynamic Provisioning` 기능을 지원한다.
+- 시스템 관리자가 별도로 disk를 생성하고, PV를 생성할 필요 없이 PVC만 정의하면 이에 맞는 물리 disk 생성 및 PV 생성을 자동화하는 기능이다.
+- PVC를 정의하면, PVC의 내용에 따라서 쿠버네티스 클러스터가 물리 Disk를 생성하고, 이에 연결된 PV를 생성한다. 
+- 운용 환경에서는 성능에 따라 다양한 Disk(nVME, SSD, HDD, NFS 등)를 사용할 수 있다. disk를 생성할 때 필요한 disk typr을 정의할 수 있는데, 이를 `storageClass`라하고 PVC에서 storage class를 지정하면 이에 맞는 disk를 생성하도록 한다.
+
+---
+
 ## Controller
 
 - 4개의 기본 object로 application을 설정하고 배포하는 것이 가능한데 이를 조금 더 편리하게 관리하기 위해서 k8s는 controller라는 개념을 사용한다.
@@ -545,7 +609,7 @@ spec:
 
 - Deployment는 Replication controller와 Replica Set 보다 상위 추상화 개념이다. 실제 운영에서는 ReplicaSet이나 Replication Controller를 바로 사용하는 것보다 Deloyment를 사용하게 된다.
 
-[쿠버네티스 배포 방식]
+[쿠버네티스 배포 방식] [![Sources](https://img.shields.io/badge/출처-thenewstack-yellow)](https://thenewstack.io/deployment-strategies/)
 
 ☞ Blue/Green Deployment (무중단 배포 방식)
 
@@ -566,6 +630,38 @@ spec:
 - 이러한 과정을 자동화하고 추상화한 개념이 `Deployment`로 Pod 배포를 위해서 RC를 생성하고 관리하는 역할을 하며, 특히 rollback을 위한 기존 버전의 RC 관리 등 여러가지 기능을 포괄적으로 포함하고 있다.
 
 ![rollingupdate](images/rollingupdate.gif)
+
+#### DaemonSet
+
+- Pod가 각각의 Node에서 하나씩만 동작하게 하는 형태로 Pod를 관리하는 Controller이다.
+- RC나 RS에 의해서 관리되는 Pod는 여러 노드의 상황에 따라서 일반적으로 비균등적으로 배포가되지만, DaemonSet에 의해 관리되는 Pod는 모든 노드에 균등하게 하나씩만 배포된다.
+- 이런 형태의 워크로드는 서버의 monitoring이나 log 수집 용도로 많이 사용된다.
+- 특정 노드에만 Pod를 배포할 수 있도록, Pod의 node selector를 이용해서 label을 이용하여 특정 node만을 선택할 수 있게 지원한다.
+
+#### Job
+
+- Batch나 한번 실행되고 끝나는 형태의 작업을 하거나, 주기적으로 ETL 배치 작업을 하는 경우에는 웹서버 처럼 계속 Pod가 떠 있을 필요없이 작업을 할 때만 Pod를 띄우면 되는데, 이러한 형태의 workload model을 지원하는 controller를 Job이라고 한다.
+- Job에 의해서 관리되는 Pod는 Job이 종료되면, Pod를 같이 종료한다.
+- Job을 정의할 때는 아래와 같이 container spec 부분에 image 뿐만 아니라, container에서 Job을 수행하기 위한 command를 같이 입력한다.
+
+```bash
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: pi
+spec:
+  template:
+    spec:
+      containers:
+      - name: pi
+        image: perl
+        command: ["perl",  "-Mbignum=bpi", "-wle", "print bpi(2000)"]
+      restartPolicy: Never
+  backoffLimit: 4
+```
+
+- 장애시에는 restart하거나 다시 시작하지 않게 할 수 있는데 작업의 상태가 보장되는것이 아니라, 다시 처음부터 작업이 재 시작되는 것이기 때문에 resume이 아닌 restart의 개념이다.
+- 여러 작업을 처리해야 하지만 순차성이 필요없고 병렬 처리가 필요한 경우, Job 설정에서 `parallelism` 에 동시 실행할 수 있는 Pod의 수를 정의하면, 지정된 수 만큼 Pod를 실행하여 completion 횟수를 병렬로 처리한다.
 
 ---
 
