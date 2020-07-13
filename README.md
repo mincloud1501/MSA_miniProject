@@ -12,9 +12,7 @@ Micro Service Architecture mini Project using Kubernetes
 
 - Docker Client와 Docker Server로 나뉘어있고 그 사이에 REST API로 소통을 한다. 결국 client는 요청을 할뿐 build, run, push등은 실질적인 작업은 다 데몬(server)이 수행한다.
 
-### Container
-
-[![Sources](https://img.shields.io/badge/출처-containerhistory-yellow)](https://pt.slideshare.net/insideHPC/linux-container-technology-101/3)
+### Container [![Sources](https://img.shields.io/badge/출처-containerhistory-yellow)](https://pt.slideshare.net/insideHPC/linux-container-technology-101/3)
 
 <p style="text-align: center;"><img src="images/containerhistory.jpg"/></p>
 
@@ -1322,6 +1320,37 @@ kubernetes-bootcamp-7d6f8694b6-rts28   1/1     Running   0          9m14s
 kubernetes-bootcamp-7d6f8694b6-xwn7k   1/1     Running   0          9m19s
 kubernetes-bootcamp-7d6f8694b6-z2t5n   1/1     Running   0          21s
 ```
+
+---
+
+# Monitoring
+
+## k8s Dashboard [![Sources](https://img.shields.io/badge/출처-kubernetes-yellow)](https://kubernetes.io/ko/docs/tasks/access-application-cluster/web-ui-dashboard/)
+
+- 웹 기반의 관리 콘솔을 제공한다. (https://github.com/kubernetes/dashboard)
+- kubernetes-dashboard.yaml 파일을 이용하여 설치가 가능하다. 단, GKE를 사용하는 경우에는 사전에 사용자 계정에 대한 cluster-admin 권한을 설정해야 한다.
+
+```bash
+$kubectl create clusterrolebinding cluster-admin-binding --clusterrole cluster-admin --user $(gcloud config get-value account
+$kubectl apply -f https://raw.githubusercontent.com/kubernetes/dashboard/v2.0.0/aio/deploy/recommended.yaml
+
+# 하기 명령어를 이용하면 admin-user의 토큰 값 확인, 이 토큰 값을 로그인 창에 입력 후 대시보드에 로그인
+%kubectl -n kube-system describe secret $(kubectl -n kube-system get secret | grep admin-user | awk '{print $1}')
+```
+
+- dashboard는 외부 service로 제공되지 않고 내부 IP로만 접속이 가능하며, cluster 외부에서 접근하려면 `kubectl proxy`를 이용하여 접근이 가능하다.
+
+```bash
+$kubectl proxy
+```
+
+- http://localhost:8001/api/v1/namespaces/kubernetes-dashboard/services/https:kubernetes-dashboard:/proxy/ 에 접속하여 사용 가능하다.
+- 특정 Pod의 container를 선택하여 web console에서 해당 container로 SSH login도 가능하다.
+
+![dashboard](images/ui-dashboard.png)
+
+
+## Prometheus
 
 ---
 
