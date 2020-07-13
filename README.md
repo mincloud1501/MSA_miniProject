@@ -1352,6 +1352,10 @@ $kubectl proxy
 
 ## Prometheus
 
+- SoundCloud(http://soundcloud.com/) 에서 개발된 application, server, OS 등 다양한 대상으로 부터 지표를 수집하여 모니터링할 수 있는 범용 솔루션
+
+![prometheus](images/prometheus.png)
+
 ---
 
 ## Management Platform
