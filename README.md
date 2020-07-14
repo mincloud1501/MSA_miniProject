@@ -1350,11 +1350,35 @@ $kubectl proxy
 ![dashboard](images/ui-dashboard.png)
 
 
-## Prometheus
+## Prometheus [![Sources](https://img.shields.io/badge/출처-programming.vip-yellow)](https://programming.vip/docs/cluster-monitoring-using-prometheus-grafana-node-exporter.html)
 
 - SoundCloud(http://soundcloud.com/) 에서 개발된 application, server, OS 등 다양한 대상으로 부터 지표를 수집하여 모니터링할 수 있는 범용 솔루션
 
-![prometheus](images/prometheus.png)
+![prometheus_architecture](images/prometheus_architecture.jpg)
+
+[Data Collect]
+
+- 데이타 수집을 위해 Pulling Model로 Prometheus가 주기적으로 monitoring 대상에서 지표를 읽어 오는 방식을 사용한다.
+- 모니터링 대상이 Prometheus Data Format을 지원하지 않는 경우, 별도의 agent를 설치해서 지표를 읽어올 수 있는데, 이를 `exporter`라고 한다. exporter는 mysql,nginx,redis와 같은 package는 미리 개발된 export가 있어서 다양한 service의 지표까지 쉽게 읽어올 수 있다.
+- java, node.js와 같은 user application의 경우에는 Exporter를 사용하지 않고, Prometheus Client Library를 사용하여 지표를 Prometheus Server로 보낼 수 있다.
+- Push Gateway를 사용하는 방법이 있는데, 배치나 스케쥴 작업 같이 필요한 경우만 동작하는 서비스의 경우, 이런 서비스들이 Push 방식으로 Push gateway에 지표를 전송하면, Push gateway가 지표를 보관하고 있다가 Prometheus Server가 Pulling하여 가져갈 수 있도록 한다.
+
+[Service Discovery]
+
+- monitoring 대상 목록을 유지하고 IP나 기타 접속 정보를 설정 파일에 주면, 이 정보를 기반으로 Prometheus Server가 monitoring 정보를 읽어온다.
+- Autoscaling을 많이 사용하는 cloud 환경이나 k8s와 같은 container 환경에서는 monitoring 대상의 IP가 동적으로 변경되는 경우가 많기 때문에 Service Discovery를 사용한다.
+- Prometheus는 DNS나 Consul, etcd와 같은 다양한 Service Discovery와 연동을 통해서 자동으로 모니터링 대상의 목록을 가지고 올 수 있다.
+
+[Visualization]
+
+- 수집된 지표 정보들은 Prometheus 내부의 시계열 DB에 저장이 되고, Prometheus Web Console을 이용하여 시각화 되거나 API를 외부에 제공해서 Grafana와 같은 시각화 tool을 통해서 지표를 시각화 할 수 있다.
+
+[k8s 연동 Architecture]
+
+- Prometheus Server는 Service Discovery를 위해 k8s API를 호출하여, 자원(Pod,Node,Service,Ingress,Endpoint 등)의 목록을 `Label Selector`를 이용하여 수집하게 된다.
+- 수집 대상에 대한 모니터링은 k8s `apiServer`에서 /metric 이라는 URL을 통해서 기본적인 지표 정보를 리턴하기 때문에, 이 API를 통해서 수집하게 된다.
+- Node에 대한 정보는 API를 통해서 수집하기가 어려워, node에 `node exporter`를 설치하여 정보를 수집한다. Container에 대한 정보는 node별로 배포되어 있는 `cAdvisor`가 수집한다. 
+- Container내에서 기동되는 application에 대한 정보는 Client SDK나 Solution에 맞는 exporter를 사용하여 수집하게 된다.
 
 ---
 
