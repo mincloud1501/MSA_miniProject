@@ -1,5 +1,5 @@
 # MSA_miniProject
-Micro Service Architecture mini Project using Kubernetes
+Micro Service Architecture mini Project using Kubernetes (with.Minikube)
 
 ## Docker [![Sources](https://img.shields.io/badge/출처-DockerContainer-yellow)](https://www.linkedin.com/pulse/docker-kubernetes-security-principles-practices-dr-rabi-prasad-padhy)
 
@@ -106,7 +106,7 @@ CMD ["start.sh"]
 - `Container Deployment` : 컨테이너는 VM과 유사하지만 격리 속성을 완화하여 애플리케이션 간에 운영체제(OS)를 공유한다. VM과 마찬가지로 컨테이너에는 자체 파일 시스템, CPU, 메모리, 프로세스 공간 등이 있고 기본 인프라와의 종속성을 끊었기 때문에, 클라우드나 OS 배포본에 모두 이식 가능
 
 ## Kubernetes v.1.16
-- Kubernetes is a portable, extensible, open-source platform for managing containerized workloads(Pods, Replicaset..) and services. (쿠버네티스는 컨테이너화된 워크로드와 서비스를 관리하기 위한 이식성이 있고, 확장가능한 오픈소스 플랫폼이다.)
+- k8s is a portable, extensible, open-source platform for managing containerized workloads(Pods, Replicaset..) and services. (쿠버네티스는 컨테이너화된 워크로드와 서비스를 관리하기 위한 이식성이 있고, 확장가능한 오픈소스 플랫폼이다.)
 - application을 배포하기 위해 desired state를 다양한 object에 라벨Label을 붙여 정의(yaml)하고 API 서버에 전달하는 방식을 사용
 - kube는 Deployment, StatefulSets, DaemonSet, Job, CronJob등 다양한 배포 방식을 지원
 - k8s는 GO 언어로 구현되어 있어 Vendor나 Platform에 종속되지 않기 때문에, 대부분의 Public Cloud(Google,Amazon,Azure)등에 사용이 가능하고 Openstack과 같은 Private Cloud 구축 환경이나 Baremetal(가상화 환경을 사용하지 않는 일반 서버 하드웨어)에도 배포가 가능하다.
@@ -249,7 +249,7 @@ kubectl create -f ./service.yaml
 
 `kube-apiserver`
 
-- API 서버는 k8s API를 노출하는 k8s Control plane component의 Frontend
+- API 서버는 k8s API를 노출하는 k8s Control plane component의 Frontend로 kubectl의 REST 진입점
 - kube-apiserver는 수평으로 확장되도록 디자인되어 더 많은 instance를 배포해서 확장/실행/인스턴스간 트래픽을 조절 기능
 
 `kube-scheduler`
@@ -287,21 +287,21 @@ kubectl create -f ./service.yaml
 
 `kubelet`
 
-- cluster의 각 node에서 실행되는 agent로 node에 할당된 Pod의 Lifecycle을 관리
-- Kubelet은 k8s를 통해 생성되지 않는 container는 관리하지 않는다.
+- Cluster의 각 Node에서 실행되는 Agent로 Node에 할당된 Pod의 Lifecycle을 관리
+- Kubelet은 k8s를 통해 생성되지 않는 Container는 관리하지 않는다.
 
 `kube-proxy`
 
-- kube-proxy는 cluster의 각 node에서 실행되는 network proxy로 Pod로 연결되는 네트워크를 관리
-- TCP, UDP, SCTP 스트림을 포워딩하고 여러 개의 Pod을 roundrobin 형태로 묶어 서비스를 제공
+- kube-proxy는 Cluster의 각 Node에서 실행되는 Network Proxy로 Pod로 연결되는 Network를 관리
+- TCP, UDP, SCTP Stream을 Forwarding하고 여러 개의 Pod을 Roundrobin 형태로 묶어 서비스를 제공
 
 `container runtime`
 
-- container 실행을 담당하는 software
-- k8s 여러 container runtime 지원 (Docker,containerd,cri-o,rktlet,Kubernetes CRI를 구현한 모든 software)
+- Container 실행을 담당하는 Software
+- k8s 여러 Container Runtime 지원 (Docker,containerd,cri-o,rktlet,Kubernetes CRI를 구현한 모든 Software)
 
 `cAdvisor`
-- 각 node에서 기동되는 monitoring agent로, node내에서 가동되는 container들의 state와 성능 등의 정보를 수집하여 master server의 API server로 전달한다.
+- 각 Node에서 기동되는 Monitoring Agent로, Node내에서 가동되는 Container들의 State와 성능 등의 정보를 수집하여 Master Server의 API Server로 전달한다.
 
 ![Kubernetes_Cluster](images/cluster.png)
 
@@ -1323,6 +1323,53 @@ kubernetes-bootcamp-7d6f8694b6-z2t5n   1/1     Running   0          21s
 
 ---
 
+# GKE(Google Kubernetes Engine)를 이용한 실습
+
+### ※ Prerequisite
+
+- Kubernetes Engine에 접속 후, 결재 사용 설정(무료평가판) : 결제 계정 당 1개의 영역(단일 영역 또는 멀티 영역) Cluster를 무료로 사용할 수 있다.
+
+![k8sengine#1](images/k8sengine1.png)
+
+- Cluster 만들기
+
+![k8sengine#2](images/k8sengine2.png)
+
+
+### [Step 1] 새 프로젝트 만들기
+
+- GCE에서는 신규 프로젝트 생성 시, Google Kubernetes Engine API를 사용하기 위한 gcloud API, docker, kubernetes command-line tool들이 모두 설정이 되어있는 `Google Cloud Shell`을 기본적으로 제공한다. 우측 상단의 shell 버튼을 클릭하면 하단에 Cloud-Shell 창을 볼 수 있다.
+
+![googlecloudshell](images/googlecloudshell.png)
+
+### [Step 2] Container Image Build
+
+- GKE는 Docker Image를 DockerFile과 application을 통해 바로 배포가 가능하다. (예제로 kubernetes-engine-samples 사용)
+
+```bash
+mincloud1501@cloudshell:~ (zipkin-proxy)$ git clone https://github.com/GoogleCloudPlatform/kubernetes-engine-samples
+Cloning into 'kubernetes-engine-samples'...
+remote: Enumerating objects: 25, done.
+remote: Counting objects: 100% (25/25), done.
+remote: Compressing objects: 100% (22/22), done.
+remote: Total 703 (delta 10), reused 10 (delta 3), pack-reused 678
+Receiving objects: 100% (703/703), 438.05 KiB | 603.00 KiB/s, done.
+Resolving deltas: 100% (316/316), done.
+```
+
+- gcloud config에 등록되어 있는 Project ID를 검색하여 등록하고, docker image를 build한다.
+
+```bash
+mincloud1501@cloudshell:~/kubernetes-engine-samples/hello-app (zipkin-proxy)$ export PROJECT_ID="$(gcloud config get-value project -q)"
+Your active configuration is: [cloudshell-1403]
+
+mincloud1501@cloudshell:~/kubernetes-engine-samples/hello-app (zipkin-proxy)$ docker build --tag hello-app:v1 .
+```
+
+![dockerimages](images/dockerimages.png)
+
+---
+
 # Monitoring
 
 ## k8s Dashboard [![Sources](https://img.shields.io/badge/출처-kubernetes-yellow)](https://kubernetes.io/ko/docs/tasks/access-application-cluster/web-ui-dashboard/)
@@ -1365,7 +1412,7 @@ $kubectl proxy
 
 [Service Discovery]
 
-- monitoring 대상 목록을 유지하고 IP나 기타 접속 정보를 설정 파일에 주면, 이 정보를 기반으로 Prometheus Server가 monitoring 정보를 읽어온다.
+- Monitoring 대상 목록을 유지하고 IP나 기타 접속 정보를 설정 파일에 주면, 이 정보를 기반으로 Prometheus Server가 monitoring 정보를 읽어온다.
 - Autoscaling을 많이 사용하는 cloud 환경이나 k8s와 같은 container 환경에서는 monitoring 대상의 IP가 동적으로 변경되는 경우가 많기 때문에 Service Discovery를 사용한다.
 - Prometheus는 DNS나 Consul, etcd와 같은 다양한 Service Discovery와 연동을 통해서 자동으로 모니터링 대상의 목록을 가지고 올 수 있다.
 
@@ -1384,58 +1431,74 @@ $kubectl proxy
 
 ## Management Platform
 
-Docker 및 k8s cluster를 배포 관리할 수 있는 플랫폼들을 알아보자.
+Docker 및 k8s Cluster를 배포 관리할 수 있는 Platform들을 알아보자.
 
 - Rancher 2.0, OpenShift(Red Hat), Tectonic(CoreOS), Docker Enterprise Edition 등
 - Service Mesh(Istio, linkerd), CI(Tekton, Spinnaker), Container Serverless(Knative), Machine Learning(kubeflow)이 모두 kube 환경
 
 [평가 요소]
 
-- k8s cluster의 provisioning
+- k8s Cluster의 Provisioning
 - 고가용성 및 복구
-- 지원되는 배포 model
+- 지원되는 배포 Model
 - 필수 구성 요소 및 운영 체제 요구 사항
-- monitoring 및 운영 관리
-- multi-cluster 관리 등
+- Monitoring 및 운영 관리
+- Multi-Cluster 관리 등
 
-#### RHOCP (Red Hat OpenShift Container Platform)
-- 순수 Open Source Model
+#### RHOCP (Red Hat OpenShift Container Platform) [![Sources](https://img.shields.io/badge/출처-OpenShift-yellow)](https://www.redhat.com/en/openshift-4)
+
+- 순수 Open Source Model로 현재 OpenShift 4까지 출시됨
 - Enterprise `지원 관점`에서 OpenShift는 Rancher보다 약 5배 비쌈
 - Red Hat OS에 국한되며 Windows를 지원하지 않음
 - Docker Image의 전체 Life-cycle를 관리
 
+![rhocp4](images/rhocp4.png)
+
 #### Pivotal Cloud Foundry (PCF)
+
 - PAS (Pivotal Application Service) & Pivotal Container Service (PKS)로 구성
 - `Ubuntu에서만 실행`되며 값 비싼 모델이라 기업에 친숙하지 않은 가격 Model
 - Open-Core Model, Microsoft Windows Server를 지원
 - 개발자가 사전 개발된 Docker Image를 맞춤 개발하여 registry에서 배포 가능
 - Spring Boot 및 Spring Cloud를 사용하는 12팩터 응용 프로그램을 제공
 
-#### Rancher v.2.0 [![Sources](https://img.shields.io/badge/출처-Rancher-yellow)](https://rancher.com)
-- Linux host, docker container, k8s node 위에서 위치나 인프라와 관계 없이 관리하며, Amazon EKS, Google k8s engine, Azure container service, 기타 서비스로서의 k8s cloud에서 k8s cluster 관리 가능
+#### Rancher v.2.0 [![Sources](https://img.shields.io/badge/출처-Rancher-yellow)](https://rancher.com/announcing-rancher-2-0/)
+
+- Linux Host, Docker Container, k8s Node 위에서 위치나 인프라와 관계 없이 관리 가능하며 Amazon EKS, Google k8s Engine, Azure Container Service, 기타 서비스로서의 k8s Cloud에서 k8s Cluster 관리 가능
+
+![rancher2](images/rancher2.png)
 
 #### CoreOS Tectonic
-- container 중심의 linux 배포판과 enterprise급 k8s 배포판을 제공. 이 두 개가 합쳐진 것이 Tectonic stack의 기반을 형성
+
+- Container 중심의 Linux 배포판과 Enterprise급 k8s 배포판을 제공. 이 두 개가 합쳐진 것이 Tectonic Stack의 기반을 형성
 - CoreOS 운영 체제인 `Container Linux`는 콘테이너화된 구성요소의 모음으로 제공된다는 점에서 차별점을 지닌다.
 - 실행 중인 애플리케이션을 중단할 필요 없이, OS에 대한 자동화된 업데이트를 가능하게 해 준다.
 
 #### Platform9 Managed k8s
-- 다양한 환경(Local baremetal, 원격 public cloud 등)에서도 실행되지만, 플랫폼9의 서비스 형태로 원격 관리
-- 플랫폼9는 매니지드 쿠버네티스에 대한 업데이트를 약 6주에 한번씩 고객 감시 하에 내보낸다.
-- Severless Compute 또는 FaaS라고도 하는데 거의 대부분의 프로그래밍 언어와 콘테이너화된 런타임으로 작동된다.
+
+- 다양한 환경(Local Baremetal, 원격 Public Cloud 등)에서도 실행되지만, 플랫폼9의 서비스 형태로 원격 관리
+- Platform9는 Managed k8s에 대한 Update를 약 6주에 한번씩 고객 감시 하에 내보낸다.
+- Severless Compute 또는 FaaS라고도 하는데 거의 대부분의 프로그래밍 언어와 콘테이너화된 Runtime으로 작동된다.
 
 ![trend](images/trend.png)
 
+#### Amazon EKS (Amazon Elastic Kubernetes Service) [![Sources](https://img.shields.io/badge/출처-Eks-yellow)](https://docs.aws.amazon.com/ko_kr/eks/latest/userguide/what-is-eks.html)
+
+- k8s Control Plane을 설치하고 운영할 필요 없이, AWS에서 k8s를 간편하게 실행하도록 하는 관리형 서비스.
+- 2017년 11월 AWS re:Invent에서 preview version이 출시되었고, 2018년 6월에 상용(GA) version이 US region에서만 출시, 2019년 1월 Seoul Region에 출시
+
+![amazoneks](images/amazoneks.png)
+
 ### ★ Considerations
 
-- k8s cluster에 Deployment를 배포하고 Ingress를 연결하자. Nginx말고 Traefik Ingress도 좋다던데?
+- k8s Cluster에 Deployment를 배포하고 Ingress를 연결하자. Nginx말고 Traefik Ingress도 좋다던데?
 - AWS에 설치할 땐 kops(Kubernetes Operations)가 좋고, 요즘엔 Amazon EKS(Elastic Kubernetes Service)도 선호?
-- on-premise에 설치할 때, kubespray / kubeadm / rancher / openshift 중에 뭐가 좋을까?
-- k8s에 istio나 linkerd 설치해서 service mesh 적용하고 zipkin으로 추적하자!
+- On-Premise에 설치할 때, kubespray / kubeadm / rancher / openshift 중에 뭐가 좋을까?
+- k8s에 Istio나 Linkerd 설치해서 Service Mesh 적용하고 Zipkin으로 추적하자!
 - Container Serverless Cloud Run이 Knative 기반이라던데?
-- Container build, 배포는 Spinnaker나 Jenkins X (Jenkins와는 다름!) 써볼까?
+- Container Build, 배포는 Spinnaker나 Jenkins X (Jenkins와는 다름!) 써볼까?
 - 설정 파일은 helm으로 만들고, ChartMuseum으로 관리하자!
-- cluster 하나는 불안한데...? multi-cluster 구성해야 하지 않을까? Anthos?
+- Cluster 하나는 불안한데...? Multi-Cluster 구성해야 하지 않을까? Anthos?
 - Cloud Native Application 만들어서 k8s에 배포하자!
 
 ---
