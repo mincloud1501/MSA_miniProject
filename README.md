@@ -1335,38 +1335,44 @@ kubernetes-bootcamp-7d6f8694b6-z2t5n   1/1     Running   0          21s
 
 ![k8sengine#2](images/k8sengine2.png)
 
-
-### [Step 1] 새 프로젝트 만들기
-
-- GCE에서는 신규 프로젝트 생성 시, Google Kubernetes Engine API를 사용하기 위한 gcloud API, docker, kubernetes command-line tool들이 모두 설정이 되어있는 `Google Cloud Shell`을 기본적으로 제공한다. 우측 상단의 shell 버튼을 클릭하면 하단에 Cloud-Shell 창을 볼 수 있다.
+- GCE에서는 신규 프로젝트 생성 시, Google Kubernetes Engine API를 사용하기 위한 gcloud API, docker, kubernetes command-line tool들이 모두 설정이 되어있는 `Google Cloud Shell`을 기본적으로 제공한다. cluster의 연결 버튼을 클릭하면 하단에 자동 인증된 Cloud-Shell 창을 볼 수 있다.
 
 ![googlecloudshell](images/googlecloudshell.png)
 
-### [Step 2] Container Image Build
+### [Step 1] GKE로 기본 서비스 하기
 
-- GKE는 Docker Image를 DockerFile과 application을 통해 바로 배포가 가능하다. (예제로 kubernetes-engine-samples 사용)
+- GCP 환경이라면 Cloud Shell로 접속한 후, 하단의 kubectl 명령을 통해서 sample container를 GKE cluster에 배포한다.
+- `gcr.io/google-samples/hello-app:1.0`는 Google의 비공개 container 저장소인 Google Container Registry(GCR)의 주소로 GCR 내의 hello-app이라는 image의 주소이다. (https://cloud.google.com/container-registry/)
 
-```bash
-mincloud1501@cloudshell:~ (zipkin-proxy)$ git clone https://github.com/GoogleCloudPlatform/kubernetes-engine-samples
-Cloning into 'kubernetes-engine-samples'...
-remote: Enumerating objects: 25, done.
-remote: Counting objects: 100% (25/25), done.
-remote: Compressing objects: 100% (22/22), done.
-remote: Total 703 (delta 10), reused 10 (delta 3), pack-reused 678
-Receiving objects: 100% (703/703), 438.05 KiB | 603.00 KiB/s, done.
-Resolving deltas: 100% (316/316), done.
-```
-
-- gcloud config에 등록되어 있는 Project ID를 검색하여 등록하고, docker image를 build한다.
 
 ```bash
-mincloud1501@cloudshell:~/kubernetes-engine-samples/hello-app (zipkin-proxy)$ export PROJECT_ID="$(gcloud config get-value project -q)"
-Your active configuration is: [cloudshell-1403]
+# run hello-server
+mincloud1501@cloudshell:~ (zipkin-proxy)$ kubectl run hello-server --image gcr.io/google-samples/hello-app:1.0 --port 8080
 
-mincloud1501@cloudshell:~/kubernetes-engine-samples/hello-app (zipkin-proxy)$ docker build --tag hello-app:v1 .
+# get-credentials and exec hello-server
+mincloud1501@cloudshell:~ (zipkin-proxy)$ gcloud container clusters get-credentials cluster-1 --zone us-central1-c --project zipkin-proxy  && kubectl exec hello-server -c hello-server -- ls
 ```
 
-![dockerimages](images/dockerimages.png)
+- kubectl 명령은 run을 수행하지만 내부적으로는 k8s의 deployment를 생성한다. kubectl을 통해서 명령어로 deployment 상태를 확인할 수도 있으며, 하단과 같이 관리 콘솔의 Workload 메뉴에서도 배포한 deployment의 상태를 확인할 수 있다.
+- yaml 형태로도 메뉴에서 바로 확인이 가능하다.
+
+![workload](images/workload.png)
+
+### [Step 2] 서비스 Expose하기
+
+![serviceexpose](images/serviceexpose.png)
+
+- `kubectl get service` 명령을 통해서 service를 확인해 보면 지정된 이름으로 service가 생성되고, LoadBalancer Type이기 때문에 external-ip가 mapping된 것을 확인할 수 있다.
+
+![getservice](images/getservice.png)
+
+- 해당 external-ip를 접속하여 서비스 결과를 확인할 수 있다.
+
+![serviceresult](images/serviceresult.png)
+
+### [Step 3] GKE Cluster Scaling 하기
+
+- TBD...
 
 ---
 
