@@ -1328,6 +1328,7 @@ kubernetes-bootcamp-7d6f8694b6-z2t5n   1/1     Running   0          21s
 ### ※ Prerequisite
 
 - Kubernetes Engine에 접속 후, 결재 사용 설정(무료평가판) : 결제 계정 당 1개의 영역(단일 영역 또는 멀티 영역) Cluster를 무료로 사용할 수 있다.
+- 모든 action은 gcloud 도구 또는 Google Cloud Console을 사용하여 수행할 수 있다. (본 실습에서는 Console 사용)
 
 ![k8sengine#1](images/k8sengine1.png)
 
@@ -1339,26 +1340,57 @@ kubernetes-bootcamp-7d6f8694b6-z2t5n   1/1     Running   0          21s
 
 ![googlecloudshell](images/googlecloudshell.png)
 
-### [Step 1] GKE로 기본 서비스 하기
+### [Step 0] GKE로 기본 서비스 하기
 
 - GCP 환경이라면 Cloud Shell로 접속한 후, 하단의 kubectl 명령을 통해서 sample container를 GKE cluster에 배포한다.
 - `gcr.io/google-samples/hello-app:1.0`는 Google의 비공개 container 저장소인 Google Container Registry(GCR)의 주소로 GCR 내의 hello-app이라는 image의 주소이다. (https://cloud.google.com/container-registry/)
 
+### [Step 1] Container Image Build하기
 
 ```bash
-# run hello-server
-mincloud1501@cloudshell:~ (zipkin-proxy)$ kubectl run hello-server --image gcr.io/google-samples/hello-app:1.0 --port 8080
+mincloud1501@cloudshell:~ (zipkin-proxy)$ cd kubernetes-engine-samples/hello-app
+mincloud1501@cloudshell:~/kubernetes-engine-samples/hello-app (zipkin-proxy)$ export PROJECT_ID=zipkin-proxy
+mincloud1501@cloudshell:~/kubernetes-engine-samples/hello-app (zipkin-proxy)$ docker build -t gcr.io/zipkin-proxy/hello-app:v1 .
+mincloud1501@cloudshell:~/kubernetes-engine-samples/hello-app (zipkin-proxy)$ docker images
+REPOSITORY                        TAG                 IMAGE ID            CREATED              SIZE
+gcr.io/zipkin-proxy/hello-app   v1                  09031eeceb01        About a minute ago   11.5MB
+<none>                            <none>              3e4dbe99e463        About a minute ago   263MB
+alpine                            latest              a24bb4013296        6 weeks ago          5.57MB
+golang                            1.8-alpine          4cb86d3661bf        2 years ago          257MB
 
-# get-credentials and exec hello-server
-mincloud1501@cloudshell:~ (zipkin-proxy)$ gcloud container clusters get-credentials cluster-1 --zone us-central1-c --project zipkin-proxy  && kubectl exec hello-server -c hello-server -- ls
+mincloud1501@cloudshell:~/kubernetes-engine-samples/hello-app (zipkin-proxy)$ docker run --rm -p 8080:8080 gcr.io/zipkin-proxy/hello-app:v1
 ```
 
-- kubectl 명령은 run을 수행하지만 내부적으로는 k8s의 deployment를 생성한다. kubectl을 통해서 명령어로 deployment 상태를 확인할 수도 있으며, 하단과 같이 관리 콘솔의 Workload 메뉴에서도 배포한 deployment의 상태를 확인할 수 있다.
+- 새 터미널 창(또는 Cloud Shell 탭)을 열고 실행하여 컨테이너가 작동하고 'Hello, World!'로 요청에 응답하는지 확인한다.
+
+```bash
+mincloud1501@cloudshell:~ (zipkin-proxy)$ curl http://localhost:8080
+Hello, world!
+Version: 1.0.0
+Hostname: 36d7f535d2bf
+```
+
+### [Step 2] Docker Image를 Container Registry로 Push하기
+
+- 방금 build한 Docker image를 Container Registry로 push
+
+```bash
+mincloud1501@cloudshell:~/kubernetes-engine-samples/hello-app (zipkin-proxy)$ docker push gcr.io/zipkin-proxy/hello-app:v1
+```
+
+### hello-app을 GKE에 배포하기
+
+- 워크로드 메뉴에서 배포를 클릭하여 배포 과정 진행
+
+![makedeploy](images/makedeploy.png)
+![deploydetail](images/deploydetail.png)
+
+- kubectl 명령은 run을 수행하지만 내부적으로는 k8s의 deployment를 생성한다. kubectl을 통해서 명령어로 deployment 상태를 확인할 수도 있으며, 하단과 같이 관리 Console의 Workload 메뉴에서도 배포한 deployment의 상태를 확인할 수 있다.
 - yaml 형태로도 메뉴에서 바로 확인이 가능하다.
 
 ![workload](images/workload.png)
 
-### [Step 2] 서비스 Expose하기
+### [Step 3] 서비스 Expose하기
 
 ![serviceexpose](images/serviceexpose.png)
 
@@ -1370,9 +1402,25 @@ mincloud1501@cloudshell:~ (zipkin-proxy)$ gcloud container clusters get-credenti
 
 ![serviceresult](images/serviceresult.png)
 
-### [Step 3] GKE Cluster Scaling 하기
+- expose시 선택한 LoadBalancer의 세부정보도 확인할 수 있다.
 
-- TBD...
+![loadbalancerdetail](images/loadbalancerdetail.png)
+
+
+### [Step 4] GKE Pod 및 Node 확장하기
+
+- kubectl 명령으로 바로 pod를 확장 할 수 있다.
+
+```bash
+mincloud1501@cloudshell:~ (zipkin-proxy)$ kubectl scale deployment hello-app --replicas=3
+```
+
+- 위와 같이 Pod를 3개로 확장했을 때, Stateless상태인 pod의 사상에 맞추어서 구동되는데 별도로 지정된 정책이 없다면 node를 보고 자원적으로 가능하다면 pool에서 꺼내어 pod를 위치 시킨다. 즉, node에 균등하게 pod가 구동되지 않는다.
+- 그러나, `nodeSelector`를 이용하여 pod를 지정된 node로 배포할 수도 있다. 또한, 사용자가 다양한 조건을 지정하여 `affinity`와 `anti-affinity`를 node 및 pod 단위 정책으로 적용이 가능하다.
+
+- Node의 확장은 GCP 관리 Console에서 GKE Cluster내 Node Pool 세부정보를 Edit하여 Size를 변경하여 확장 및 축소가 가능하다.
+
+![nodepool](images/nodepool.png)
 
 ---
 
