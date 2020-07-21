@@ -1424,6 +1424,152 @@ mincloud1501@cloudshell:~ (zipkin-proxy)$ kubectl scale deployment hello-app --r
 
 ---
 
+# k8s RBAC (Role Based Access Control)
+
+- 역할 기반의 접근제어 기능으로 기본 액세스 제어 API를 사용하여 Cluster 또는 Namespace 수준에서 k8s resource와 작업을 위한 세분화된 권한이 있는 Role을 만들 수 있는 기능을 제공한다.
+- 역할을 만든 후 역할을 사용자와 k8s service 계정에 할당하는 `RoleBinding`을 만들어서 연결 가능하다.
+- k8s 내부의 액세스 제어에 익숙하고 cloud와 상관없는 방식의 액세스 관리를 선호하는 경우에 유용하다.
+- RBAC을 사용하기 위해서는 Role이나 ClusterRole이라는 객체를 생성한 후, RoleBinding이나 ClusterRoleBinding을 사용해서 연관된 역할과 사용자를 연결해주면 된다.
+- `ClusterRole`은 cluster level이나 resource 단위가 아닌 Endpoint(ex: /healthz) 등에 적용할 수 있는 객체를 말한다.
+
+```bash
+mincloud1501@cloudshell:~ (zipkin-proxy)$ kubectl get role --all-namespaces                                                                                                                                  
+NAMESPACE     NAME                                             AGE
+kube-public   system:controller:bootstrap-signer               6d2h
+kube-system   cloud-provider                                   6d2h
+kube-system   extension-apiserver-authentication-reader        6d2h
+kube-system   gce:cloud-provider                               6d2h
+kube-system   system::leader-locking-kube-controller-manager   6d2h
+kube-system   system::leader-locking-kube-scheduler            6d2h
+kube-system   system:controller:bootstrap-signer               6d2h
+kube-system   system:controller:cloud-provider                 6d2h
+kube-system   system:controller:token-cleaner                  6d2h
+kube-system   system:fluentd-gcp-scaler                        6d2h
+kube-system   system:pod-nanny                                 6d2h
+```
+
+- 각 role의 상세 내용도 확인할 수 있다.
+
+```bash
+mincloud1501@cloudshell:~ (zipkin-proxy)$ kubectl get role gce:cloud-provider -n kube-system -o=yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  annotations:
+    kubectl.kubernetes.io/last-applied-configuration: |
+      {"apiVersion":"rbac.authorization.k8s.io/v1","kind":"Role","metadata":{"annotations":{},"labels":{"addonmanager.kubernetes.io/mode":"Reconcile"},"name":"gce:cloud-provider","namespace":"kube-system"},"rules":[{"apiGroups":[""],"resources":["configmaps"],"verbs":["create","get","patch","update","list","watch"]}]}
+  creationTimestamp: "2020-07-15T02:12:25Z"
+  labels:
+    addonmanager.kubernetes.io/mode: Reconcile
+  name: gce:cloud-provider
+  namespace: kube-system
+  resourceVersion: "496"
+  selfLink: /apis/rbac.authorization.k8s.io/v1/namespaces/kube-system/roles/gce%3Acloud-provider
+  uid: 9fe80b25-c640-11ea-9ec8-42010a800109
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - configmaps
+  verbs:
+  - create
+  - get
+  - patch
+  - update
+  - list
+  - watch
+```
+
+- ClusterRole도 확인이 가능한데 namespace와 연동되지 않은 admin, edit 등의 역할도 확인할 수 있다.
+
+```bash
+mincloud1501@cloudshell:~ (zipkin-proxy)$ kubectl get clusterroles
+NAME                                                                   AGE
+admin                                                                  6d2h
+cloud-provider                                                         6d2h
+cluster-admin                                                          6d2h
+edit                                                                   6d2h
+gce:beta:kubelet-certificate-bootstrap                                 6d2h
+gce:beta:kubelet-certificate-rotation                                  6d2h
+gce:cloud-provider                                                     6d2h
+kubelet-api-admin                                                      6d2h
+read-updateinfo                                                        6d2h
+stackdriver:fluentd-gcp                                                6d2h
+stackdriver:metadata-agent                                             6d2h
+system:aggregate-to-admin                                              6d2h
+system:aggregate-to-edit                                               6d2h
+system:aggregate-to-view                                               6d2h
+system:auth-delegator                                                  6d2h
+system:aws-cloud-provider                                              6d2h
+system:basic-user                                                      6d2h
+system:certificates.k8s.io:certificatesigningrequests:nodeclient       6d2h
+system:certificates.k8s.io:certificatesigningrequests:selfnodeclient   6d2h
+system:controller:attachdetach-controller                              6d2h
+system:controller:certificate-controller                               6d2h
+system:controller:clusterrole-aggregation-controller                   6d2h
+system:controller:cronjob-controller                                   6d2h
+system:controller:daemon-set-controller                                6d2h
+system:controller:deployment-controller                                6d2h
+```
+
+- 현재 계정을 확인한 후, kubectl로 해당 사용자에게 clusterrolebinding을 만들어서 cluster-admin 권한을 제공 가능하다.
+
+```bash
+mincloud1501@cloudshell:~ (zipkin-proxy)$ gcloud info | grep Account
+Account: [mincloud1501@gmail.com]
+
+mincloud1501@cloudshell:~ (zipkin-proxy)$ kubectl create clusterrolebinding myname-cluster-admin-binding --clusterrole=cluster-admin --user=mincloud1501@gmail.com
+clusterrolebinding.rbac.authorization.k8s.io/myname-cluster-admin-binding created
+
+mincloud1501@cloudshell:~ (zipkin-proxy)$ kubectl get clusterrolebinding
+NAME                                                   AGE
+cluster-admin                                          6d2h
+cluster-autoscaler-updateinfo                          6d2h
+event-exporter-rb                                      6d2h
+gce:beta:kubelet-certificate-bootstrap                 6d2h
+gce:beta:kubelet-certificate-rotation                  6d2h
+gce:cloud-provider                                     6d2h
+heapster-binding                                       6d2h
+kube-apiserver-kubelet-api-admin                       6d2h
+kubelet-bootstrap                                      6d2h
+kubelet-bootstrap-certificate-bootstrap                6d2h
+kubelet-bootstrap-node-bootstrapper                    6d2h
+kubelet-cluster-admin                                  6d2h
+metrics-server:system:auth-delegator                   6d2h
+myname-cluster-admin-binding                           16s
+npd-binding                                            6d2h
+stackdriver:fluentd-gcp                                6d2h
+stackdriver:metadata-agent                             6d2h
+system:aws-cloud-provider                              6d2h
+system:basic-user                                      6d2h
+system:controller:attachdetach-controller              6d2h
+system:controller:certificate-controller               6d2h
+system:controller:clusterrole-aggregation-controller   6d2h
+system:controller:cronjob-controller                   6d2h
+system:controller:daemon-set-controller                6d2h
+system:controller:deployment-controller                6d2h
+
+mincloud1501@cloudshell:~ (zipkin-proxy)$ kubectl get clusterrolebinding myname-cluster-admin-binding -o=yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  creationTimestamp: "2020-07-21T04:33:58Z"
+  name: myname-cluster-admin-binding
+  resourceVersion: "1859671"
+  selfLink: /apis/rbac.authorization.k8s.io/v1/clusterrolebindings/myname-cluster-admin-binding
+  uid: 64efca76-cb0b-11ea-a9ea-42010a800239
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: cluster-admin
+subjects:
+- apiGroup: rbac.authorization.k8s.io
+  kind: User
+  name: mincloud1501@gmail.com
+```
+
+---
+
 # Monitoring
 
 ## k8s Dashboard [![Sources](https://img.shields.io/badge/출처-kubernetes-yellow)](https://kubernetes.io/ko/docs/tasks/access-application-cluster/web-ui-dashboard/)
