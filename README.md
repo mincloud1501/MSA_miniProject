@@ -1629,6 +1629,157 @@ $kubectl proxy
 
 ---
 
+# k8s Istio
+
+- GKE는 Istio 기능을 Add-on으로 지원하고 있다.
+※ Istio에 대한 자세한 기능 설명은 저의 또 다른 게시물을 참고하세요 (https://github.com/mincloud1501/spring-cloud-workshop)
+
+### Istio 설정
+
+- k8s 환경에서는 pod안 각각의 container 형태로 배치하여, 쉽게 sidecar pattern 구현 및 Istio를 활용할 수 있다.
+
+![istio](images/istio.png)
+
+- Istio control plain의 Pilot, Galley, Citadel, Gateway 등의 Component가 pod 형태로 설치된 것을 확인할 수 있다.
+
+```bash
+mincloud1501@cloudshell:~ (zipkin-proxy)$ kubectl get pods -n istio-system -o wide
+NAME                                             READY   STATUS      RESTARTS   AGE   IP          NODE                                       NOMINATED NODE   READINESS GATES
+istio-citadel-58f5d45db8-mj2r4                   1/1     Running     0          14m   10.4.2.8    gke-cluster-1-default-pool-e9d52118-6wd2   <none>           <none>
+istio-galley-789957bcc9-6bdjz                    1/1     Running     0          14m   10.4.2.11   gke-cluster-1-default-pool-e9d52118-6wd2   <none>           <none>
+istio-ingressgateway-bf489d5bc-qxdss             1/1     Running     0          14m   10.4.2.9    gke-cluster-1-default-pool-e9d52118-6wd2   <none>           <none>
+istio-pilot-6798bbbbbb-p74kt                     2/2     Running     0          14m   10.4.0.8    gke-cluster-1-default-pool-e9d52118-l8lr   <none>           <none>
+istio-policy-84bf65849d-mfqm4                    2/2     Running     4          14m   10.4.1.6    gke-cluster-1-default-pool-e9d52118-1217   <none>           <none>
+istio-security-post-install-1.2.10-gke.3-tnlz9   0/1     Completed   0          14m   10.4.2.10   gke-cluster-1-default-pool-e9d52118-6wd2   <none>           <none>
+istio-sidecar-injector-cb8cb6fb8-88knq           1/1     Running     0          14m   10.4.2.12   gke-cluster-1-default-pool-e9d52118-6wd2   <none>           <none>
+istio-telemetry-7d57788966-zmlwb                 2/2     Running     4          14m   10.4.1.7    gke-cluster-1-default-pool-e9d52118-1217   <none>           <none>
+promsd-b9966d7d5-b2mx9                           2/2     Running     1          14m   10.4.0.9    gke-cluster-1-default-pool-e9d52118-l8lr   <none>           <none>
+```
+
+### Istio 구동 및 테스트
+
+- Istio 공식 샘플인 Bookinfo를 사용하여 테스트 해 보자. (https://github.com/istio/istio.git)
+
+#### [Step 1] istio-injection 설정 추가
+
+- 추가된 설정을 enabled로 하면 추가 명령 없이 해당 namespace로 배포되는 모든 deployments에 자동으로 Istio를 위한 proxy 컨테이너가 추가된다.
+
+```bash
+mincloud1501@cloudshell:~ (zipkin-proxy)$ kubectl create namespace istio
+mincloud1501@cloudshell:~ (zipkin-proxy)$ kubectl label namespace istio istio-injection=enabled
+```
+
+#### [Step 2] Service 배포
+
+- github에서 source를 download 받은 후, kubernetes service를 배포해 보자. 각 pod 안에 isito-proxy라는 container가 추가된다. (sidecar 패턴의 proxy 즉, Envoy)
+
+```bash
+mincloud1501@cloudshell:~/istio (zipkin-proxy)$ kubectl apply -f samples/bookinfo/platform/kube/bookinfo.yaml -n istio
+service/details created
+serviceaccount/bookinfo-details created
+deployment.apps/details-v1 created
+service/ratings created
+serviceaccount/bookinfo-ratings created
+deployment.apps/ratings-v1 created
+service/reviews created
+serviceaccount/bookinfo-reviews created
+deployment.apps/reviews-v1 created
+deployment.apps/reviews-v2 created
+deployment.apps/reviews-v3 created
+service/productpage created
+serviceaccount/bookinfo-productpage created
+deployment.apps/productpage-v1 created
+
+mincloud1501@cloudshell:~/istio (zipkin-proxy)$ kubectl get pods -n istio
+NAME                              READY   STATUS    RESTARTS   AGE
+details-v1-8574688997-lx47b       2/2     Running   0          102s
+productpage-v1-7c5d988487-gz276   2/2     Running   0          97s
+ratings-v1-68cfddcccc-rfvqc       2/2     Running   0          101s
+reviews-v1-786c44785f-hmlgl       2/2     Running   0          99s
+reviews-v2-7bd4c669f9-9r9lt       2/2     Running   0          99s
+reviews-v3-6fdcf4d5c9-stpnm       2/2     Running   0          98s
+```
+
+#### [Step 3] Gateway와 VirtualService 배포
+
+- 실제 서비스를 수행하기 위해 Istio에서 필요한 Gateway와 VirtualService를 배포한다. (Ingress gateway -> VirtualService -> k8s Service 구조로 구성된다.)
+- `bookinfo-gateway.yaml`의 내용을 보면 booinfo라는 bookinfo-gateway와 연결되어 `/productpage` 요청이 들어오면, productpage service에게 9080 port로 전달하는 VirtualService를 생성하는 구문으로 구성되어 있다.
+
+```bash
+apiVersion: networking.istio.io/v1alpha3
+kind: Gateway
+metadata:
+  name: bookinfo-gateway
+spec:
+  selector:
+    istio: ingressgateway # use istio default controller
+  servers:
+  - port:
+      number: 80
+      name: http
+      protocol: HTTP
+    hosts:
+    - "*"
+---
+apiVersion: networking.istio.io/v1alpha3
+kind: VirtualService
+metadata:
+  name: bookinfo
+spec:
+  hosts:
+  - "*"
+  gateways:
+  - bookinfo-gateway
+  http:
+  - match:
+    - uri:
+        exact: /productpage
+    - uri:
+        exact: /login
+    - uri:
+        exact: /logout
+    - uri:
+        prefix: /api/v1/products
+    route:
+    - destination:
+        host: productpage
+        port:
+          number: 9080
+```
+
+```bash
+mincloud1501@cloudshell:~/istio (zipkin-proxy)$ kubectl apply -f samples/bookinfo/networking/bookinfo-gateway.yaml -n istio
+gateway.networking.istio.io/bookinfo-gateway created
+virtualservice.networking.istio.io/bookinfo created
+
+mincloud1501@cloudshell:~/istio (zipkin-proxy)$ kubectl get gateway -n istio
+NAME               AGE
+bookinfo-gateway   38s
+
+mincloud1501@cloudshell:~/istio (zipkin-proxy)$ kubectl get virtualservice -n istio
+NAME       GATEWAYS             HOSTS   AGE
+bookinfo   [bookinfo-gateway]   [*]     47s
+```
+
+#### [Step 4] Service IP 확인
+
+- 서비스를 위해 생성된 gateway가 ingressgateway를 사용하도록 설정되었으니 다음과 같은 명령어로 서비스 가능한 IP를 확인한다.
+
+```bash
+mincloud1501@cloudshell:~/istio (zipkin-proxy)$ kubectl get svc istio-ingressgateway -n istio-system
+NAME                   TYPE           CLUSTER-IP   EXTERNAL-IP     PORT(S)   AGE
+istio-ingressgateway   LoadBalancer   10.8.9.9     35.222.191.94   15020:30681/TCP,80:32574/TCP,443:32468/TCP,31400:31884/TCP,15029:32173/TCP,15030:31029/TCP,15031:31880/TCP,15032:31616/TCP,15443:32072/TCP   72m
+```
+
+#### [Step 5] Service 접속
+
+- Browser를 통해서 실제 서비스를 호출하여 정상적으로 bookinfo page가 접속되는지 확인한다.
+
+![bookinfo](images/bookinfo.png)
+
+
+---
+
 ## Management Platform
 
 Docker 및 k8s Cluster를 배포 관리할 수 있는 Platform들을 알아보자.
