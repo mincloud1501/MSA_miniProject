@@ -1777,6 +1777,133 @@ istio-ingressgateway   LoadBalancer   10.8.9.9     35.222.191.94   15020:30681/T
 
 ![bookinfo](images/bookinfo.png)
 
+---
+
+## Istio Traffic Management [![Sources](https://img.shields.io/badge/출처-Istio-yellow)](https://istio.io/docs/concepts/what-is-istio/)
+
+- Istio는 Traffic Management 기능을 위해서 내부적으로 `Pilot`과 `Envoy`라는 Component를 활용한다.
+- `Envoy`는 proxy 역할을 수행하며 business logic이 담겨져 있는 container와 pod에 sidecar pattern 형태로 같이 배포되어, Service Mesh의 모든 서비스에 대한 In/Out Bound traffic을 조정할 수 있는 component이다. 아래는 Envoy의 다양한 기능
+	- Dynamic service discovery
+	- Load balancing
+	- TLS termination
+	- HTTP/2 and gRPC proxies
+	- Circuit breakers
+	- Health checks
+	- Staged rollouts with %-based traffic split
+	- Fault injection
+	- Rich metrics
+- `Pilot`은 Envoy라는 sidecar 형태의 proxy에 대한 서비스 검색, 지능형 라우팅(ex: A / B Test, Canary Rollout 등) 및 탄력성(시간 초과, 재시도, circuit breakers 등)을 위한 traffic 관리 기능을 제공한다.
+
+![pilot](images/pilot.png)
+
+- Pilot은 Istio에 배포 된 Envoy Instance의 lifecycle를 담당하며, service discovery, load balancing 조정 풀 및 routing table에 대한 동적 업데이트를 가능하게 하므로, 각 Envoy 다른 instance에 대한 정기적인 Health check를 기반으로 load balancing 조정 정보를 유지 관리한다.
+- 다시 말해, Pilot의 Rule 설정을 통해 트래픽 관리 규칙을 지정할 수 있으며, 이러한 규칙은 하위 수준 구성으로 변화되고 Envoy instance에 배포되어 실제 서비스 실행시점에 traffice 제어가 진행된다.
+
+### Traffic Management Test
+
+- Istio를 사용하여 Bookinfo sample에 대한 version routing을 제어하려면 `Destination Rules`을 정의해야 한다. [![Sources](https://img.shields.io/badge/출처-Istio-yellow)](https://istio.io/docs/concepts/traffic-management/#destination-rules)
+
+```bash
+mincloud1501@cloudshell:~/istio (zipkin-proxy)$ kubectl apply -f samples/bookinfo/networking/destination-rule-all.yaml -n istio
+destinationrule.networking.istio.io/productpage created
+destinationrule.networking.istio.io/reviews created
+destinationrule.networking.istio.io/ratings created
+destinationrule.networking.istio.io/details created
+```
+
+[destination-rule-sample.yaml]
+
+```bash
+apiVersion: networking.istio.io/v1alpha3
+kind: VirtualService
+metadata:
+  name: reviews
+spec:
+  hosts:
+    - reviews
+  http:
+  - route:
+    - destination:
+        host: reviews
+        subset: v1
+      weight: 85
+    - destination:
+        host: reviews
+        subset: v2
+      weight: 15
+```
+
+```bash
+mincloud1501@cloudshell:~/istio/samples/bookinfo/networking (zipkin-proxy)$ kubectl apply -f destination-rule-sample.yaml -n istio
+virtualservice.networking.istio.io/reviews created
+
+mincloud1501@cloudshell:~/istio/samples/bookinfo/networking (zipkin-proxy)$ kubectl get virtualservices -n istio
+NAME       GATEWAYS             HOSTS       AGE
+bookinfo   [bookinfo-gateway]   [*]         44h
+reviews                         [reviews]   53s
+```
+
+- v1 과 v2 의 가중치를 변경해서 배포하고 테스트 해보면, 결과를 좀 더 빠르고 명확히 확인해 볼 수 있다.
+
+![result0](images/result0.png)
+![result1](images/result1.png)
+
+- Istio의 Traffic Management는 가중치 말고도 다양한 형태가 있는데 예를 들어, Istio에서 수행되는 HTTP 요청은 15초를 기본 Timeout으로 가지고 있지만 이를 지정해서 미리 timeout이 발생되게 하거나, 재시도 횟수까지 설정할 수 있다. [![Sources](https://img.shields.io/badge/출처-Istio-yellow)](https://istio.io/docs/concepts/traffic-management/)
+
+[request-timeout-rating.yaml]
+
+```bash
+apiVersion: networking.istio.io/v1alpha3
+kind: VirtualService
+metadata:
+  name: ratings
+spec:
+  hosts:
+  - ratings
+  http:
+  - fault:
+      delay:
+        percent: 100
+        fixedDelay: 2s
+    route:
+    - destination:
+        host: ratings
+        subset: v1
+```
+
+[request-timeout.yaml]
+
+```bash
+apiVersion: networking.istio.io/v1alpha3
+kind: VirtualService
+metadata:
+  name: reviews
+spec:
+  hosts:
+  - reviews
+  http:
+  - route:
+    - destination:
+        host: reviews
+        subset: v2
+    timeout: 0.5s
+```
+
+```bash
+mincloud1501@cloudshell:~/istio/samples/bookinfo/networking (zipkin-proxy)$ kubectl apply -f request-timeout-rating.yaml -n istio
+virtualservice.networking.istio.io/ratings configured
+
+mincloud1501@cloudshell:~/istio/samples/bookinfo/networking (zipkin-proxy)$ kubectl apply -f request-timeout.yaml -n istio
+virtualservice.networking.istio.io/reviews configured
+
+mincloud1501@cloudshell:~/istio/samples/bookinfo/networking (zipkin-proxy)$ kubectl get virtualservices -n istio
+NAME       GATEWAYS             HOSTS       AGE
+bookinfo   [bookinfo-gateway]   [*]         44h
+ratings                         [ratings]   5m55s
+reviews                         [reviews]   18m
+```
+
+- 이렇게 Istio는 Infra의 변경 없이 다양한 traffic 관리 및 제어 기능을 수행할 수 있다.
 
 ---
 
