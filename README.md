@@ -1700,6 +1700,8 @@ reviews-v2-7bd4c669f9-9r9lt       2/2     Running   0          99s
 reviews-v3-6fdcf4d5c9-stpnm       2/2     Running   0          98s
 ```
 
+![services](images/services.png)
+
 #### [Step 3] Gateway와 VirtualService 배포
 
 - 실제 서비스를 수행하기 위해 Istio에서 필요한 Gateway와 VirtualService를 배포한다. (Ingress gateway -> VirtualService -> k8s Service 구조로 구성된다.)
@@ -1904,6 +1906,13 @@ reviews                         [reviews]   18m
 ```
 
 - 이렇게 Istio는 Infra의 변경 없이 다양한 traffic 관리 및 제어 기능을 수행할 수 있다.
+
+### Monitoring
+
+- GKE cluster의 monitoring 정보는 Stackdriver Monitoring이 훨씬 상세하고 잘 나오며 통합 대시보드로 연동도 가능하다.
+- Workloads 메뉴를 선택하면 GKE cluster의 Deployment나 Job과 같은 workload를 확인할 수 있으며, Services는 service와 service type, endpoints 등을 일목요연하게 확인할 수 있다.
+
+![monitoring](images/monitoring.png)
 
 ---
 
