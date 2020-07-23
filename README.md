@@ -1907,12 +1907,43 @@ reviews                         [reviews]   18m
 
 - 이렇게 Istio는 Infra의 변경 없이 다양한 traffic 관리 및 제어 기능을 수행할 수 있다.
 
-### Monitoring
+### Monitoring & Profiling [![Sources](https://img.shields.io/badge/출처-Profiler-yellow)](https://cloud.google.com/profiler/docs/samples)
 
 - GKE cluster의 monitoring 정보는 Stackdriver Monitoring이 훨씬 상세하고 잘 나오며 통합 대시보드로 연동도 가능하다.
 - Workloads 메뉴를 선택하면 GKE cluster의 Deployment나 Job과 같은 workload를 확인할 수 있으며, Services는 service와 service type, endpoints 등을 일목요연하게 확인할 수 있다.
 
 ![monitoring](images/monitoring.png)
+
+- Cloud Shell을 활성화하여, 프로파일링할 프로그램을 가져온다.
+
+```bash
+mincloud1501@cloudshell:~/(zipkin-proxy)$ go get -u github.com/GoogleCloudPlatform/golang-samples/profiler/...
+```
+
+- Profiler용 sample code directory로 이동하여, CPU 사용량이 많은 workload를 만들어 data를 profiler에 제공하는 main.go를 시작하고 실행 중인 상태로 둔다.
+
+```bash
+mincloud1501@cloudshell:~/gopath/src/github.com/GoogleCloudPlatform/golang-samples/profiler/profiler_quickstart (zipkin-proxy)$ go run main.go
+
+Stackdriver Profiler Go Agent version: 20200706
+profiler has started
+creating a new profile via profiler service
+successfully created profile CPU
+start uploading profile
+creating a new profile via profiler service
+```
+
+- hotapp sample에서는 함수 두 개를 호출하는 무한 loop를 사용한 후, Go 스케줄러를 사용한다.
+
+```bash
+mincloud1501@cloudshell:~/gopath/src/github.com/GoogleCloudPlatform/golang-samples/profiler/hotapp (zipkin-proxy)$ go run main.go
+# 또는 아래 명령을 수행
+mincloud1501@cloudshell:~/gopath/src/github.com/GoogleCloudPlatform/golang-samples/profiler/hotapp (zipkin-proxy)$ go run main.go -service=docdemo-service -local_work -skew=75 -version=1.75.0
+```
+
+- application을 시작하고 초기 Profile data가 Profiler에 표시된다. 이 Interface는 Profiling Data를 탐색하는 데 필요한 Control Array와 Flame Graph를 제공한다.
+
+![profiling](images/profiling.png)
 
 ---
 
