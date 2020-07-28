@@ -1570,6 +1570,66 @@ subjects:
 
 ---
 
+# k8s Network
+
+- k8s Network는 크게 4가지로 분류된다. [![Sources](https://img.shields.io/badge/출처-coffeewhale-yellow)](https://coffeewhale.com/k8s/network/2019/04/19/k8s-network-01/)
+	- 서로 결합된 container와 container간 통신
+	- Pod와 Pod 간의 통신
+	- Pod와 Service간의 통신
+	- 외부와 Service간의 통신
+
+### Container to Container
+
+- Docker에서는 기본적으로 같은 Node(host)내의 container끼리의 통신은 `docker0`라는 가상 네트워크 인터페이스를 통해 가능하다.
+- 각 container는 `veth`라는 가상 네트워크 인터페이스를 고유하게 가지며 각각의 veth IP 주소 값으로 통신할 수 있다.
+- veth0 안에서 각 container는 고유한 port 번호로 서로를 구분한다.
+- k8s Pod가 실행되고 있는 worker node에 들어가서 docker ps를 실행하면 적어도 한 개 이상의 `pause`라는 명령으로 실행된 container를 볼 수 있다. container들은 각 Pod마다 존재하며 다른 container들에게 Network Interface를 제공하는 역할만 담당한다.
+- pause명령으로 실행된 container는 k8s가 `SIGTERM` 명령을 내리기 전까지 아무것도 하지 않고 sleep 상태로 존재한다.
+
+![container2container](images/container2container.png)
+
+### Pod to Pod
+
+- k8s에서는 Pod networking interface로 `CNI Spec`을 준수하는 다양한 network plugin을 사용하는 것을 권장한다.
+- 각 Pod는 고유한 IP 주소를 가지고, kubenet 또는 CNI로 구성된 network interface를 통하여 고유한 IP 주소로 서로 통신할 수 있다.
+
+![pod2pod](images/pod2pod.png)
+
+### Pod to Service
+
+- Pod IP를 어떤 Service의 Endpoint로 설정하는 것은 가능하지만, 해당 Pod가 계속 존재한다는 보장도 없고 새로운 Pod가 생성되었을 때, 그 IP 주소가 endpoint와 동일할거라고 보장할 수 없기 때문에 service 앞단에 reverse-proxy(or Load Balancer)를 위치시키는 방법을 사용한다.
+- service란 k8s resource type 중 하나로 각 Pod로 traffic을 forwarding 해주는 proxy 역할을 하는데 이 때 `selector`를 이용하여 traffic을 전달받을 Pod들을 결정한다.
+- Pod network와 동일하게 service network 또한 가상 IP 주소이지만, ifconfig로 조회할 수 없으며 routing table에서도 service netwrok에 대한 경로를 찾아볼 수 없다.
+
+![pod2service](images/pod2service.png)
+
+- client pod가 service network를 통해 server pod1으로 http request를 요청하는 과정은 아래와 같다.
+	- client pod가 http request를 service-test라는 DNS name으로 요청한다.
+	- cluster DNS server(coredns)가 해당 name을 service IP로 mapping시켜준다.
+	- http client는 DNS로부터 IP를 이용하여 최종적으로 요청을 보내게 된다.
+	- IP network(Layer 3)는 자신의 host에서 목적지를 찾지 못하면, 상위 gateway(`cbr0`)로 packet을 전달하도록 동작한다.
+
+- k8s는 Linux Kernel 기능 중 하나인 `netfilter`와 `user space`에 존재하는 interface인 `iptables`라는 s/w를 이용하여 packet 흐름을 제어한다.
+- netfilter란 Rule-based packet 처리 engine이며, kernel space에 위치하여 모든 packet의 lifecycle를 관찰한다.
+- iptables는 netfilter를 이용하여 chain rule이라는 규칙을 지정하여 packet을 forwarding하도록 network를 설정한다.
+
+### External to Service
+
+- Service는 3개 type을 통해 외부 통신을 가능하게 기능을 제공한다.
+	- NodePort
+	- Load Balancer
+	- Ingress
+- NodePort type의 service는 ClusterIP type(default)과 동일하지만 몇가지 기능들을 더 가지고 있다.
+- k8s가 NodePort type의 service를 생성하면 kube-proxy가 각 node의 eth0 network interface에 `30000–32767`사이의 임의의 포트를 할당한다.
+- 할당된 port로 요청이 오면 이를 mapping된 ClusterIP로 전달한다.
+
+![external2service](images/external2service.png)
+
+- Load Balancer는 AWS나 Azure와 같은 외부 Cloud Service를 사용하여 loadbalancer를 provisioning할 수 있는 경우에 사용할 수 있는 Service type로 외부 loadbalancer의 traffic은 cluster내의 Pod로 전달된다.
+- Ingress란 Revers Proxy를 통해 cluster 내부 Service로 어떻게 packet을 forwarding시킬 것인지 명시한 k8s resource이다. Ingress Controller는 다양하며 많이 사용하는 Ingress Controller는 `nginx-ingress`이다.
+
+---
+
 # Monitoring
 
 ## k8s Dashboard [![Sources](https://img.shields.io/badge/출처-kubernetes-yellow)](https://kubernetes.io/ko/docs/tasks/access-application-cluster/web-ui-dashboard/)
