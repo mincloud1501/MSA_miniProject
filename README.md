@@ -105,11 +105,12 @@ CMD ["start.sh"]
 
 - `Container Deployment` : 컨테이너는 VM과 유사하지만 격리 속성을 완화하여 애플리케이션 간에 운영체제(OS)를 공유한다. VM과 마찬가지로 컨테이너에는 자체 파일 시스템, CPU, 메모리, 프로세스 공간 등이 있고 기본 인프라와의 종속성을 끊었기 때문에, 클라우드나 OS 배포본에 모두 이식 가능
 
-## Kubernetes v.1.16
+## Kubernetes v1.18
 - k8s is a portable, extensible, open-source platform for managing containerized workloads(Pods, Replicaset..) and services. (쿠버네티스는 컨테이너화된 워크로드와 서비스를 관리하기 위한 이식성이 있고, 확장가능한 오픈소스 플랫폼이다.)
 - application을 배포하기 위해 desired state를 다양한 object에 라벨Label을 붙여 정의(yaml)하고 API 서버에 전달하는 방식을 사용
 - kube는 Deployment, StatefulSets, DaemonSet, Job, CronJob등 다양한 배포 방식을 지원
 - k8s는 GO 언어로 구현되어 있어 Vendor나 Platform에 종속되지 않기 때문에, 대부분의 Public Cloud(Google,Amazon,Azure)등에 사용이 가능하고 Openstack과 같은 Private Cloud 구축 환경이나 Baremetal(가상화 환경을 사용하지 않는 일반 서버 하드웨어)에도 배포가 가능하다.
+- 전세계의 Container Orchesration Tool은 109개 이상으로 이 가운데 89%가 k8s의 다양한 버전을 사용 중이다.
 
 [Kubernetes Architecture & Ecosystem] [![Sources](https://img.shields.io/badge/출처-learnitguide-yellow)](https://www.learnitguide.net/2018/08/what-is-kubernetes-learn-kubernetes.html) [![Sources](https://img.shields.io/badge/출처-magalix-yellow)](https://www.magalix.com/blog/kubernetes-101-concepts-and-why-it-matters)
 
@@ -238,14 +239,14 @@ kubectl create -f ./service.yaml
 
 ---
 
-## Component (Master/Node)
+## Component (Master/Worker Node)
 
 <p style="text-align: center;">
 	<img src="images/kubernetes_architecture.jpg"/>
 	<img src="images/components-of-kubernetes.png"/>
 </p>
 
-### Master Component
+### Master Node Component
 
 `kube-apiserver`
 
@@ -283,21 +284,23 @@ kubectl create -f ./service.yaml
 - 새로운 resource가 생기면, 그 resource에 대한 IP와 DNS 이름을 등록하여, DNS 이름을 기반으로 resource에 접근할 수 있도록 한다.
 
 
-### Node Component
+### Worker Node Component
 
 `kubelet`
 
+- Master의 명령 수행을 위한 k8s Agent
 - Cluster의 각 Node에서 실행되는 Agent로 Node에 할당된 Pod의 Lifecycle을 관리
 - Kubelet은 k8s를 통해 생성되지 않는 Container는 관리하지 않는다.
 
 `kube-proxy`
 
+- Worker가 받은 요청을 Pod로 전달하는 역할
 - kube-proxy는 Cluster의 각 Node에서 실행되는 Network Proxy로 Pod로 연결되는 Network를 관리
 - TCP, UDP, SCTP Stream을 Forwarding하고 여러 개의 Pod을 Roundrobin 형태로 묶어 서비스를 제공
 
 `container runtime`
 
-- Container 실행을 담당하는 Software
+- Container 실행을 담당하는 Software, Docker Engine 포함
 - k8s 여러 Container Runtime 지원 (Docker,containerd,cri-o,rktlet,Kubernetes CRI를 구현한 모든 Software)
 
 `cAdvisor`
@@ -1692,6 +1695,7 @@ $kubectl proxy
 # k8s Istio
 
 - GKE는 Istio 기능을 Add-on으로 지원하고 있다.
+- 대표적 Service Mesh Project는 Istio, Consul, Meflix OSS Zuul, Linkerd, Grey Matter, Vamp, SuperGloo 등이 있으며, 이 중 Istio가 69%로 가장 많고, Linkerd가 64%로 사용 중이다.
 ※ Istio에 대한 자세한 기능 설명은 저의 또 다른 게시물을 참고하세요 (https://github.com/mincloud1501/spring-cloud-workshop)
 
 ### Istio 설정
@@ -2078,6 +2082,29 @@ Docker 및 k8s Cluster를 배포 관리할 수 있는 Platform들을 알아보�
 - 설정 파일은 helm으로 만들고, ChartMuseum으로 관리하자!
 - Cluster 하나는 불안한데...? Multi-Cluster 구성해야 하지 않을까? Anthos?
 - Cloud Native Application 만들어서 k8s에 배포하자!
+
+---
+
+# k8s Tools
+
+- `Goldpinger` : 블룸버그 기술 팀이 OpenSource로 공개, k8s Cluster 내에서 실행되면서 Node간의 관계를 Interactive Map으로 표시 [![Sources](https://img.shields.io/badge/출처-goldpinger-yellow)](https://github.com/bloomberg/goldpinger)
+
+![goldpinger](images/goldpinger.png)
+
+- `K9s` : k8s Cluster용 전체 화면 CLI UI로 실행 중인 포드, 로그, 배포를 한눈에 볼 수 있고 신속한 Shell Access가 가능 [![Sources](https://img.shields.io/badge/출처-K9s-yellow)](https://github.com/derailed/k9s)
+
+![k9s](images/k9s.png)
+
+- `Kubebox` : 메모리/CPU 사용량, Pod 목록, 실행 Log, 구성 편집기를 Interactive하게 표시해주는 기능 제공 [![Sources](https://img.shields.io/badge/출처-kubebox-yellow)](https://github.com/astefanutti/kubebox)
+
+![kubebox](images/kubebox.png)
+
+- `Kube-Spy` : k8s resource의 변경을 실시간으로 추적하고, 현재 상황에 대한 일종의 Test View Dashboard를 제공하는 진단 툴 [![Sources](https://img.shields.io/badge/출처-kubespy-yellow)](https://github.com/pulumi/kubespy)
+
+![kubespy](images/kubespy.gif)
+
+- `Kops` : 명령줄에서 k8s cluster를 관리할 수 있게 해주는 Tool로 Terraform 구성을 생성해서 Terraform을 사용해 cluster를 재배포할 수 있게 해준다. [![Sources](https://img.shields.io/badge/출처-kops-yellow)](https://github.com/kubernetes/kops)
+- `Bitnami Cabin`: 관리자를 위해 iOS 또는 Android 폰에서 Access할 수 있는 k8s Dashboard 제공 [![Sources](https://img.shields.io/badge/출처-BitnamiCabin-yellow)](https://github.com/bitnami-labs/cabin)
 
 ---
 
